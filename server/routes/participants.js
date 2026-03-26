@@ -1,21 +1,25 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const db = require('../db/init');
+const { db } = require('../db/init');
 const authMiddleware = require('../middleware/auth');
 
 router.use(authMiddleware);
 
 // Get all participants
-router.get('/', (req, res) => {
-  const participants = db.prepare(
-    'SELECT * FROM participants WHERE khatma_id = ? ORDER BY slot_number'
-  ).all(req.khatma.id);
-
-  res.json(participants);
+router.get('/', async (req, res) => {
+  try {
+    const result = await db.execute({
+      sql: 'SELECT * FROM participants WHERE khatma_id = ? ORDER BY slot_number',
+      args: [req.khatma.id]
+    });
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
+  }
 });
 
 // Add participant
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { name, slotNumber } = req.body;
 
   if (!name || !slotNumber) {
@@ -27,13 +31,13 @@ router.post('/', (req, res) => {
   }
 
   try {
-    db.prepare(
-      'INSERT INTO participants (khatma_id, name, slot_number) VALUES (?, ?, ?)'
-    ).run(req.khatma.id, name, slotNumber);
-
+    await db.execute({
+      sql: 'INSERT INTO participants (khatma_id, name, slot_number) VALUES (?, ?, ?)',
+      args: [req.khatma.id, name, slotNumber]
+    });
     res.status(201).json({ message: 'تمت إضافة المشارك بنجاح' });
   } catch (err) {
-    if (err.message.includes('UNIQUE')) {
+    if (err.message && err.message.includes('UNIQUE')) {
       return res.status(409).json({ error: 'هذا الترتيب مشغول بالفعل' });
     }
     res.status(500).json({ error: 'حدث خطأ' });
@@ -41,34 +45,42 @@ router.post('/', (req, res) => {
 });
 
 // Update participant
-router.put('/:pid', (req, res) => {
+router.put('/:pid', async (req, res) => {
   const { name } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'الاسم مطلوب' });
   }
 
-  const result = db.prepare(
-    'UPDATE participants SET name = ? WHERE id = ? AND khatma_id = ?'
-  ).run(name, req.params.pid, req.khatma.id);
+  try {
+    const result = await db.execute({
+      sql: 'UPDATE participants SET name = ? WHERE id = ? AND khatma_id = ?',
+      args: [name, req.params.pid, req.khatma.id]
+    });
 
-  if (result.changes === 0) {
-    return res.status(404).json({ error: 'المشارك غير موجود' });
+    if (result.rowsAffected === 0) {
+      return res.status(404).json({ error: 'المشارك غير موجود' });
+    }
+    res.json({ message: 'تم التحديث بنجاح' });
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
   }
-
-  res.json({ message: 'تم التحديث بنجاح' });
 });
 
 // Delete participant
-router.delete('/:pid', (req, res) => {
-  const result = db.prepare(
-    'DELETE FROM participants WHERE id = ? AND khatma_id = ?'
-  ).run(req.params.pid, req.khatma.id);
+router.delete('/:pid', async (req, res) => {
+  try {
+    const result = await db.execute({
+      sql: 'DELETE FROM participants WHERE id = ? AND khatma_id = ?',
+      args: [req.params.pid, req.khatma.id]
+    });
 
-  if (result.changes === 0) {
-    return res.status(404).json({ error: 'المشارك غير موجود' });
+    if (result.rowsAffected === 0) {
+      return res.status(404).json({ error: 'المشارك غير موجود' });
+    }
+    res.json({ message: 'تم حذف المشارك بنجاح' });
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
   }
-
-  res.json({ message: 'تم حذف المشارك بنجاح' });
 });
 
 module.exports = router;

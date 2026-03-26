@@ -1,13 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { initDB } = require('./db/init');
 
 const khatmaRoutes = require('./routes/khatma');
 const participantRoutes = require('./routes/participants');
 const deceasedRoutes = require('./routes/deceased');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -25,6 +25,14 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+// Initialize DB and start server (for local dev)
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  initDB().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  });
+}
+
+module.exports = app;

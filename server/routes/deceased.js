@@ -1,21 +1,25 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const db = require('../db/init');
+const { db } = require('../db/init');
 const authMiddleware = require('../middleware/auth');
 
 router.use(authMiddleware);
 
 // Get all deceased
-router.get('/', (req, res) => {
-  const deceased = db.prepare(
-    'SELECT * FROM deceased WHERE khatma_id = ? ORDER BY death_date'
-  ).all(req.khatma.id);
-
-  res.json(deceased);
+router.get('/', async (req, res) => {
+  try {
+    const result = await db.execute({
+      sql: 'SELECT * FROM deceased WHERE khatma_id = ? ORDER BY death_date',
+      args: [req.khatma.id]
+    });
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
+  }
 });
 
 // Add deceased
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { name, deathDate } = req.body;
 
   if (!name || !deathDate) {
@@ -23,10 +27,10 @@ router.post('/', (req, res) => {
   }
 
   try {
-    db.prepare(
-      'INSERT INTO deceased (khatma_id, name, death_date) VALUES (?, ?, ?)'
-    ).run(req.khatma.id, name, deathDate);
-
+    await db.execute({
+      sql: 'INSERT INTO deceased (khatma_id, name, death_date) VALUES (?, ?, ?)',
+      args: [req.khatma.id, name, deathDate]
+    });
     res.status(201).json({ message: 'تمت الإضافة بنجاح' });
   } catch (err) {
     res.status(500).json({ error: 'حدث خطأ' });
@@ -34,7 +38,7 @@ router.post('/', (req, res) => {
 });
 
 // Update deceased
-router.put('/:did', (req, res) => {
+router.put('/:did', async (req, res) => {
   const { name, deathDate } = req.body;
 
   const updates = [];
@@ -47,29 +51,37 @@ router.put('/:did', (req, res) => {
     return res.status(400).json({ error: 'لا توجد بيانات للتحديث' });
   }
 
-  values.push(req.params.did, req.khatma.id);
-  const result = db.prepare(
-    `UPDATE deceased SET ${updates.join(', ')} WHERE id = ? AND khatma_id = ?`
-  ).run(...values);
+  try {
+    values.push(req.params.did, req.khatma.id);
+    const result = await db.execute({
+      sql: `UPDATE deceased SET ${updates.join(', ')} WHERE id = ? AND khatma_id = ?`,
+      args: values
+    });
 
-  if (result.changes === 0) {
-    return res.status(404).json({ error: 'السجل غير موجود' });
+    if (result.rowsAffected === 0) {
+      return res.status(404).json({ error: 'السجل غير موجود' });
+    }
+    res.json({ message: 'تم التحديث بنجاح' });
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
   }
-
-  res.json({ message: 'تم التحديث بنجاح' });
 });
 
 // Delete deceased
-router.delete('/:did', (req, res) => {
-  const result = db.prepare(
-    'DELETE FROM deceased WHERE id = ? AND khatma_id = ?'
-  ).run(req.params.did, req.khatma.id);
+router.delete('/:did', async (req, res) => {
+  try {
+    const result = await db.execute({
+      sql: 'DELETE FROM deceased WHERE id = ? AND khatma_id = ?',
+      args: [req.params.did, req.khatma.id]
+    });
 
-  if (result.changes === 0) {
-    return res.status(404).json({ error: 'السجل غير موجود' });
+    if (result.rowsAffected === 0) {
+      return res.status(404).json({ error: 'السجل غير موجود' });
+    }
+    res.json({ message: 'تم الحذف بنجاح' });
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
   }
-
-  res.json({ message: 'تم الحذف بنجاح' });
 });
 
 module.exports = router;
