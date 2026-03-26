@@ -1,12 +1,10 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const Participant = require('../models/Participant');
-const authMiddleware = require('../middleware/auth');
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
-router.use(authMiddleware);
-
-// Get all participants
-router.get('/', async (req, res) => {
+// Get all participants (any authenticated user)
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const participants = await Participant.find({ khatma_id: req.khatma._id }).sort('slot_number');
     res.json(participants);
@@ -15,8 +13,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Add participant
-router.post('/', async (req, res) => {
+// Add participant (admin only)
+router.post('/', adminMiddleware, async (req, res) => {
   const { name, slotNumber } = req.body;
 
   if (!name || !slotNumber) {
@@ -28,12 +26,12 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    await Participant.create({
+    const participant = await Participant.create({
       khatma_id: req.khatma._id,
       name,
       slot_number: slotNumber
     });
-    res.status(201).json({ message: 'تمت إضافة المشارك بنجاح' });
+    res.status(201).json({ message: 'تمت إضافة المشارك بنجاح', participant });
   } catch (err) {
     if (err.code === 11000) {
       return res.status(409).json({ error: 'هذا الترتيب مشغول بالفعل' });
@@ -42,8 +40,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update participant
-router.put('/:pid', async (req, res) => {
+// Update participant (admin only)
+router.put('/:pid', adminMiddleware, async (req, res) => {
   const { name } = req.body;
   if (!name) {
     return res.status(400).json({ error: 'الاسم مطلوب' });
@@ -52,20 +50,21 @@ router.put('/:pid', async (req, res) => {
   try {
     const result = await Participant.findOneAndUpdate(
       { _id: req.params.pid, khatma_id: req.khatma._id },
-      { name }
+      { name },
+      { new: true }
     );
 
     if (!result) {
       return res.status(404).json({ error: 'المشارك غير موجود' });
     }
-    res.json({ message: 'تم التحديث بنجاح' });
+    res.json({ message: 'تم التحديث بنجاح', participant: result });
   } catch (err) {
     res.status(500).json({ error: 'حدث خطأ' });
   }
 });
 
-// Delete participant
-router.delete('/:pid', async (req, res) => {
+// Delete participant (admin only)
+router.delete('/:pid', adminMiddleware, async (req, res) => {
   try {
     const result = await Participant.findOneAndDelete({
       _id: req.params.pid,

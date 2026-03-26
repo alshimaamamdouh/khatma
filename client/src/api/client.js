@@ -2,10 +2,12 @@ const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 async function request(endpoint, options = {}) {
   const code = localStorage.getItem('khatmaCode');
+  const adminPassword = localStorage.getItem('adminPassword');
 
   const headers = {
     'Content-Type': 'application/json',
     ...(code ? { 'x-khatma-code': code } : {}),
+    ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
     ...options.headers
   };
 
@@ -30,6 +32,11 @@ export const api = {
     body: JSON.stringify({ code })
   }),
 
+  adminLogin: (code, adminPassword) => request('/khatma/admin-login', {
+    method: 'POST',
+    body: JSON.stringify({ code, adminPassword })
+  }),
+
   createKhatma: (data) => request('/khatma', {
     method: 'POST',
     body: JSON.stringify(data)
@@ -40,6 +47,10 @@ export const api = {
   updateKhatma: (id, data) => request(`/khatma/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data)
+  }),
+
+  deleteKhatma: (id) => request(`/khatma/${id}`, {
+    method: 'DELETE'
   }),
 
   // Participants
@@ -64,6 +75,11 @@ export const api = {
 
   addDeceased: (khatmaId, data) => request(`/khatma/${khatmaId}/deceased`, {
     method: 'POST',
+    body: JSON.stringify(data)
+  }),
+
+  updateDeceased: (khatmaId, did, data) => request(`/khatma/${khatmaId}/deceased/${did}`, {
+    method: 'PUT',
     body: JSON.stringify(data)
   }),
 

@@ -3,10 +3,10 @@ const router = express.Router();
 const Khatma = require('../models/Khatma');
 const Participant = require('../models/Participant');
 const Deceased = require('../models/Deceased');
-const authMiddleware = require('../middleware/auth');
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { getWeekNumber, getCurrentJuz, getWeekDedication } = require('../utils/rotation');
 
-// Access a Khatma by code
+// Access a Khatma by code (participant login)
 router.post('/access', async (req, res) => {
   const { code } = req.body;
   if (!code) {
@@ -14,7 +14,7 @@ router.post('/access', async (req, res) => {
   }
 
   try {
-    const khatma = await Khatma.findOne({ access_code: code });
+    const khatma = await Khatma.findOne({ access_code: code }).select('-admin_password');
     if (!khatma) {
       return res.status(404).json({ error: 'رمز الختمة غير صحيح' });
     }
@@ -27,11 +27,43 @@ router.post('/access', async (req, res) => {
   }
 });
 
+// Admin login
+router.post('/admin-login', async (req, res) => {
+  const { code, adminPassword } = req.body;
+  if (!code || !adminPassword) {
+    return res.status(400).json({ error: 'رمز الختمة وكلمة مرور المسؤول مطلوبان' });
+  }
+
+  try {
+    const khatma = await Khatma.findOne({ access_code: code, admin_password: adminPassword });
+    if (!khatma) {
+      return res.status(404).json({ error: 'رمز الختمة أو كلمة مرور المسؤول غير صحيحة' });
+    }
+
+    const participants = await Participant.find({ khatma_id: khatma._id }).sort('slot_number');
+    const deceased = await Deceased.find({ khatma_id: khatma._id }).sort('death_date');
+
+    res.json({
+      khatma: {
+        _id: khatma._id,
+        name: khatma.name,
+        access_code: khatma.access_code,
+        start_date: khatma.start_date,
+        created_at: khatma.created_at
+      },
+      participants,
+      deceased
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
+  }
+});
+
 // Create a new Khatma
 router.post('/', async (req, res) => {
-  const { name, accessCode, startDate, participants, deceased } = req.body;
+  const { name, accessCode, adminPassword, startDate, participants, deceased } = req.body;
 
-  if (!name || !accessCode || !startDate) {
+  if (!name || !accessCode || !adminPassword || !startDate) {
     return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
   }
 
@@ -44,6 +76,7 @@ router.post('/', async (req, res) => {
     const khatma = await Khatma.create({
       name,
       access_code: accessCode,
+      admin_password: adminPassword,
       start_date: startDate
     });
 
@@ -71,7 +104,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Get dashboard data
+// Get dashboard data (participant view)
 router.get('/:id/dashboard', authMiddleware, async (req, res) => {
   try {
     const khatma = req.khatma;
@@ -91,7 +124,12 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
     const dedication = getWeekDedication(deceasedList, weekNumber);
 
     res.json({
-      khatma,
+      khatma: {
+        _id: khatma._id,
+        name: khatma.name,
+        access_code: khatma.access_code,
+        start_date: khatma.start_date
+      },
       weekNumber: weekNumber + 1,
       participants: participantsWithJuz,
       dedication,
@@ -102,8 +140,8 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
   }
 });
 
-// Update Khatma
-router.put('/:id', authMiddleware, async (req, res) => {
+// Update Khatma (admin only)
+router.put('/:id', adminMiddleware, async (req, res) => {
   const { name, startDate } = req.body;
   const update = {};
 
@@ -117,6 +155,18 @@ router.put('/:id', authMiddleware, async (req, res) => {
   try {
     await Khatma.findByIdAndUpdate(req.khatma._id, update);
     res.json({ message: 'تم التحديث بنجاح' });
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
+  }
+});
+
+// Delete Khatma (admin only)
+router.delete('/:id', adminMiddleware, async (req, res) => {
+  try {
+    await Participant.deleteMany({ khatma_id: req.khatma._id });
+    await Deceased.deleteMany({ khatma_id: req.khatma._id });
+    await Khatma.findByIdAndDelete(req.khatma._id);
+    res.json({ message: 'تم حذف الختمة بنجاح' });
   } catch (err) {
     res.status(500).json({ error: 'حدث خطأ' });
   }

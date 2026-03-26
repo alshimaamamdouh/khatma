@@ -2,14 +2,22 @@ import { useState } from 'react';
 import { api } from '../api/client';
 
 function AdminPage() {
-  const [step, setStep] = useState('create'); // 'create' | 'manage'
+  const [step, setStep] = useState('choose'); // 'choose' | 'create' | 'login' | 'manage'
   const [khatmaId, setKhatmaId] = useState(null);
+  const [khatmaData, setKhatmaData] = useState(null);
   const [accessCode, setAccessCode] = useState('');
 
   // Create form
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Login form
+  const [loginCode, setLoginCode] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
+  // State
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -17,18 +25,28 @@ function AdminPage() {
   const [participants, setParticipants] = useState([]);
   const [newParticipantName, setNewParticipantName] = useState('');
   const [newParticipantSlot, setNewParticipantSlot] = useState('');
+  const [editingParticipant, setEditingParticipant] = useState(null);
+  const [editParticipantName, setEditParticipantName] = useState('');
 
   // Deceased
   const [deceasedList, setDeceasedList] = useState([]);
   const [newDeceasedName, setNewDeceasedName] = useState('');
   const [newDeceasedDate, setNewDeceasedDate] = useState('');
+  const [editingDeceased, setEditingDeceased] = useState(null);
+  const [editDeceasedName, setEditDeceasedName] = useState('');
+  const [editDeceasedDate, setEditDeceasedDate] = useState('');
+
+  // Edit Khatma
+  const [editKhatmaName, setEditKhatmaName] = useState('');
+  const [editStartDate, setEditStartDate] = useState('');
+  const [showEditKhatma, setShowEditKhatma] = useState(false);
 
   const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
-    if (!name || !code || !startDate) {
+    if (!name || !code || !adminPassword || !startDate) {
       setError('جميع الحقول مطلوبة');
       return;
     }
@@ -37,14 +55,62 @@ function AdminPage() {
       const result = await api.createKhatma({
         name,
         accessCode: code,
+        adminPassword,
         startDate
       });
       setKhatmaId(result.id);
       setAccessCode(code);
       localStorage.setItem('khatmaCode', code);
       localStorage.setItem('khatmaId', result.id);
+      localStorage.setItem('adminPassword', adminPassword);
+      setKhatmaData({ name, start_date: startDate });
+      setEditKhatmaName(name);
+      setEditStartDate(startDate);
       setSuccess('تم إنشاء الختمة بنجاح!');
       setStep('manage');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleAdminLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!loginCode || !loginPassword) {
+      setError('رمز الختمة وكلمة مرور المسؤول مطلوبان');
+      return;
+    }
+
+    try {
+      const data = await api.adminLogin(loginCode, loginPassword);
+      setKhatmaId(data.khatma._id);
+      setAccessCode(data.khatma.access_code);
+      setKhatmaData(data.khatma);
+      setParticipants(data.participants);
+      setDeceasedList(data.deceased);
+      setEditKhatmaName(data.khatma.name);
+      setEditStartDate(data.khatma.start_date);
+      localStorage.setItem('khatmaCode', data.khatma.access_code);
+      localStorage.setItem('khatmaId', data.khatma._id);
+      localStorage.setItem('adminPassword', loginPassword);
+      setStep('manage');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleUpdateKhatma = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      await api.updateKhatma(khatmaId, {
+        name: editKhatmaName,
+        startDate: editStartDate
+      });
+      setKhatmaData({ ...khatmaData, name: editKhatmaName, start_date: editStartDate });
+      setSuccess('تم تحديث بيانات الختمة');
+      setShowEditKhatma(false);
     } catch (err) {
       setError(err.message);
     }
@@ -60,16 +126,41 @@ function AdminPage() {
     }
 
     try {
-      await api.addParticipant(khatmaId, {
+      const result = await api.addParticipant(khatmaId, {
         name: newParticipantName,
         slotNumber: Number(newParticipantSlot)
       });
       setParticipants([...participants, {
+        _id: result.participant._id,
         name: newParticipantName,
         slot_number: Number(newParticipantSlot)
       }]);
       setNewParticipantName('');
       setNewParticipantSlot('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleUpdateParticipant = async (pid) => {
+    setError('');
+    try {
+      await api.updateParticipant(khatmaId, pid, { name: editParticipantName });
+      setParticipants(participants.map(p =>
+        p._id === pid ? { ...p, name: editParticipantName } : p
+      ));
+      setEditingParticipant(null);
+      setEditParticipantName('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteParticipant = async (pid) => {
+    setError('');
+    try {
+      await api.deleteParticipant(khatmaId, pid);
+      setParticipants(participants.filter(p => p._id !== pid));
     } catch (err) {
       setError(err.message);
     }
@@ -85,11 +176,12 @@ function AdminPage() {
     }
 
     try {
-      await api.addDeceased(khatmaId, {
+      const result = await api.addDeceased(khatmaId, {
         name: newDeceasedName,
         deathDate: newDeceasedDate
       });
       setDeceasedList([...deceasedList, {
+        _id: result.deceased._id,
         name: newDeceasedName,
         death_date: newDeceasedDate
       }]);
@@ -100,11 +192,56 @@ function AdminPage() {
     }
   };
 
-  // Get available slots (1-30 minus already taken)
+  const handleUpdateDeceased = async (did) => {
+    setError('');
+    try {
+      await api.updateDeceased(khatmaId, did, {
+        name: editDeceasedName,
+        deathDate: editDeceasedDate
+      });
+      setDeceasedList(deceasedList.map(d =>
+        d._id === did ? { ...d, name: editDeceasedName, death_date: editDeceasedDate } : d
+      ));
+      setEditingDeceased(null);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDeleteDeceased = async (did) => {
+    setError('');
+    try {
+      await api.deleteDeceased(khatmaId, did);
+      setDeceasedList(deceasedList.filter(d => d._id !== did));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const takenSlots = new Set(participants.map(p => p.slot_number));
   const availableSlots = Array.from({ length: 30 }, (_, i) => i + 1)
     .filter(n => !takenSlots.has(n));
 
+  // Choose: create or login
+  if (step === 'choose') {
+    return (
+      <div className="home-page">
+        <div className="card" style={{ maxWidth: 400, textAlign: 'center' }}>
+          <h2 className="card-title">لوحة الإدارة</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button className="btn btn-primary btn-block" onClick={() => setStep('create')}>
+              إنشاء ختمة جديدة
+            </button>
+            <button className="btn btn-secondary btn-block" onClick={() => setStep('login')}>
+              إدارة ختمة موجودة
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Create new Khatma
   if (step === 'create') {
     return (
       <div>
@@ -135,6 +272,16 @@ function AdminPage() {
             </div>
 
             <div className="form-group">
+              <label>كلمة مرور المسؤول (خاصة بك فقط)</label>
+              <input
+                type="password"
+                placeholder="كلمة مرور لإدارة الختمة"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
               <label>تاريخ بداية الختمة</label>
               <input
                 type="date"
@@ -147,28 +294,109 @@ function AdminPage() {
               إنشاء الختمة
             </button>
           </form>
+
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => setStep('choose')}>
+              رجوع
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Admin login
+  if (step === 'login') {
+    return (
+      <div className="home-page">
+        <div className="card" style={{ maxWidth: 400 }}>
+          <h2 className="card-title">دخول المسؤول</h2>
+
+          {error && <div className="error-msg">{error}</div>}
+
+          <form onSubmit={handleAdminLogin}>
+            <div className="form-group">
+              <label>رمز الختمة</label>
+              <input
+                type="text"
+                placeholder="أدخل رمز الختمة"
+                value={loginCode}
+                onChange={(e) => setLoginCode(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>كلمة مرور المسؤول</label>
+              <input
+                type="password"
+                placeholder="أدخل كلمة مرور المسؤول"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+              />
+            </div>
+
+            <button type="submit" className="btn btn-primary btn-block">
+              دخول
+            </button>
+          </form>
+
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => setStep('choose')}>
+              رجوع
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Management page
   return (
     <div>
+      {/* Khatma Info */}
       <div className="card">
-        <h2 className="card-title">إدارة الختمة</h2>
+        <h2 className="card-title">إدارة: {khatmaData?.name}</h2>
         {success && <div className="success-msg">{success}</div>}
         {error && <div className="error-msg">{error}</div>}
 
-        <p style={{ textAlign: 'center', marginBottom: 8 }}>رمز الدخول:</p>
+        <p style={{ textAlign: 'center', marginBottom: 8 }}>رمز الدخول للمشاركين:</p>
         <div className="access-code-display">{accessCode}</div>
-        <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-light)' }}>
-          شارك هذا الرمز مع المشاركين للدخول إلى الختمة
-        </p>
+
+        {!showEditKhatma ? (
+          <div style={{ textAlign: 'center', marginTop: 12 }}>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowEditKhatma(true)}>
+              تعديل بيانات الختمة
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleUpdateKhatma} style={{ marginTop: 16 }}>
+            <div className="form-group">
+              <label>اسم الختمة</label>
+              <input
+                type="text"
+                value={editKhatmaName}
+                onChange={(e) => setEditKhatmaName(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label>تاريخ البداية</label>
+              <input
+                type="date"
+                value={editStartDate}
+                onChange={(e) => setEditStartDate(e.target.value)}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="submit" className="btn btn-primary">حفظ</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowEditKhatma(false)}>إلغاء</button>
+            </div>
+          </form>
+        )}
       </div>
 
-      {/* Add Participants */}
+      {/* Participants Management */}
       <div className="card admin-section">
-        <h3>إضافة المشاركين ({participants.length}/30)</h3>
+        <h3>المشاركون ({participants.length}/30)</h3>
 
         <form onSubmit={handleAddParticipant} className="inline-form">
           <div className="form-group">
@@ -195,20 +423,49 @@ function AdminPage() {
 
         {participants.length > 0 && (
           <ul className="admin-list" style={{ marginTop: 12 }}>
-            {participants
+            {[...participants]
               .sort((a, b) => a.slot_number - b.slot_number)
-              .map((p, i) => (
-                <li key={i}>
-                  <span>#{p.slot_number} - {p.name}</span>
+              .map((p) => (
+                <li key={p._id}>
+                  {editingParticipant === p._id ? (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', width: '100%' }}>
+                      <input
+                        type="text"
+                        value={editParticipantName}
+                        onChange={(e) => setEditParticipantName(e.target.value)}
+                        style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)' }}
+                      />
+                      <button className="btn btn-primary btn-sm" onClick={() => handleUpdateParticipant(p._id)}>حفظ</button>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setEditingParticipant(null)}>إلغاء</button>
+                    </div>
+                  ) : (
+                    <>
+                      <span>#{p.slot_number} - {p.name}</span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => { setEditingParticipant(p._id); setEditParticipantName(p.name); }}
+                        >
+                          تعديل
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => handleDeleteParticipant(p._id)}
+                        >
+                          حذف
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </li>
               ))}
           </ul>
         )}
       </div>
 
-      {/* Add Deceased */}
+      {/* Deceased Management */}
       <div className="card admin-section">
-        <h3>إضافة المتوفين</h3>
+        <h3>المتوفون</h3>
 
         <form onSubmit={handleAddDeceased} className="inline-form">
           <div className="form-group">
@@ -231,9 +488,48 @@ function AdminPage() {
 
         {deceasedList.length > 0 && (
           <ul className="admin-list" style={{ marginTop: 12 }}>
-            {deceasedList.map((d, i) => (
-              <li key={i}>
-                <span>{d.name} - {new Date(d.death_date).toLocaleDateString('ar-EG')}</span>
+            {deceasedList.map((d) => (
+              <li key={d._id}>
+                {editingDeceased === d._id ? (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', width: '100%', flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      value={editDeceasedName}
+                      onChange={(e) => setEditDeceasedName(e.target.value)}
+                      style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', minWidth: 120 }}
+                    />
+                    <input
+                      type="date"
+                      value={editDeceasedDate}
+                      onChange={(e) => setEditDeceasedDate(e.target.value)}
+                      style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)' }}
+                    />
+                    <button className="btn btn-primary btn-sm" onClick={() => handleUpdateDeceased(d._id)}>حفظ</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setEditingDeceased(null)}>إلغاء</button>
+                  </div>
+                ) : (
+                  <>
+                    <span>{d.name} - {new Date(d.death_date).toLocaleDateString('ar-EG')}</span>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          setEditingDeceased(d._id);
+                          setEditDeceasedName(d.name);
+                          setEditDeceasedDate(d.death_date);
+                        }}
+                      >
+                        تعديل
+                      </button>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => handleDeleteDeceased(d._id)}
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  </>
+                )}
               </li>
             ))}
           </ul>

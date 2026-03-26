@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const khatmaSchema = new mongoose.Schema({
   name: { type: String, required: true },
   access_code: { type: String, required: true, unique: true },
+  admin_password: { type: String, required: true },
   start_date: { type: String, required: true },
   created_at: { type: Date, default: Date.now }
 });
