@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const { db } = require('../db/init');
+const Deceased = require('../models/Deceased');
 const authMiddleware = require('../middleware/auth');
 
 router.use(authMiddleware);
@@ -8,11 +8,8 @@ router.use(authMiddleware);
 // Get all deceased
 router.get('/', async (req, res) => {
   try {
-    const result = await db.execute({
-      sql: 'SELECT * FROM deceased WHERE khatma_id = ? ORDER BY death_date',
-      args: [req.khatma.id]
-    });
-    res.json(result.rows);
+    const deceased = await Deceased.find({ khatma_id: req.khatma._id }).sort('death_date');
+    res.json(deceased);
   } catch (err) {
     res.status(500).json({ error: 'حدث خطأ' });
   }
@@ -27,9 +24,10 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    await db.execute({
-      sql: 'INSERT INTO deceased (khatma_id, name, death_date) VALUES (?, ?, ?)',
-      args: [req.khatma.id, name, deathDate]
+    await Deceased.create({
+      khatma_id: req.khatma._id,
+      name,
+      death_date: deathDate
     });
     res.status(201).json({ message: 'تمت الإضافة بنجاح' });
   } catch (err) {
@@ -40,25 +38,22 @@ router.post('/', async (req, res) => {
 // Update deceased
 router.put('/:did', async (req, res) => {
   const { name, deathDate } = req.body;
+  const update = {};
 
-  const updates = [];
-  const values = [];
+  if (name) update.name = name;
+  if (deathDate) update.death_date = deathDate;
 
-  if (name) { updates.push('name = ?'); values.push(name); }
-  if (deathDate) { updates.push('death_date = ?'); values.push(deathDate); }
-
-  if (updates.length === 0) {
+  if (Object.keys(update).length === 0) {
     return res.status(400).json({ error: 'لا توجد بيانات للتحديث' });
   }
 
   try {
-    values.push(req.params.did, req.khatma.id);
-    const result = await db.execute({
-      sql: `UPDATE deceased SET ${updates.join(', ')} WHERE id = ? AND khatma_id = ?`,
-      args: values
-    });
+    const result = await Deceased.findOneAndUpdate(
+      { _id: req.params.did, khatma_id: req.khatma._id },
+      update
+    );
 
-    if (result.rowsAffected === 0) {
+    if (!result) {
       return res.status(404).json({ error: 'السجل غير موجود' });
     }
     res.json({ message: 'تم التحديث بنجاح' });
@@ -70,12 +65,12 @@ router.put('/:did', async (req, res) => {
 // Delete deceased
 router.delete('/:did', async (req, res) => {
   try {
-    const result = await db.execute({
-      sql: 'DELETE FROM deceased WHERE id = ? AND khatma_id = ?',
-      args: [req.params.did, req.khatma.id]
+    const result = await Deceased.findOneAndDelete({
+      _id: req.params.did,
+      khatma_id: req.khatma._id
     });
 
-    if (result.rowsAffected === 0) {
+    if (!result) {
       return res.status(404).json({ error: 'السجل غير موجود' });
     }
     res.json({ message: 'تم الحذف بنجاح' });

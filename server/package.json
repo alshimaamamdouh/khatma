@@ -8,9 +8,8 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.2",
-    "better-sqlite3": "^11.7.0",
     "cors": "^2.8.5",
-    "express": "^4.21.1"
+    "express": "^4.21.1",
+    "mongoose": "^9.3.3"
   }
 }

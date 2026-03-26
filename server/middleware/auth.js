@@ -1,4 +1,4 @@
-const { db } = require('../db/init');
+const Khatma = require('../models/Khatma');
 
 async function authMiddleware(req, res, next) {
   const code = req.headers['x-khatma-code'];
@@ -9,16 +9,13 @@ async function authMiddleware(req, res, next) {
   }
 
   try {
-    const result = await db.execute({
-      sql: 'SELECT * FROM khatma WHERE id = ? AND access_code = ?',
-      args: [khatmaId, code]
-    });
+    const khatma = await Khatma.findOne({ _id: khatmaId, access_code: code });
 
-    if (result.rows.length === 0) {
+    if (!khatma) {
       return res.status(403).json({ error: 'رمز الدخول غير صحيح' });
     }
 
-    req.khatma = result.rows[0];
+    req.khatma = khatma;
     next();
   } catch (err) {
     res.status(500).json({ error: 'خطأ في التحقق' });

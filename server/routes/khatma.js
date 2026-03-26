@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { db } = require('../db/init');
+const Khatma = require('../models/Khatma');
+const Participant = require('../models/Participant');
+const Deceased = require('../models/Deceased');
 const authMiddleware = require('../middleware/auth');
 const { getWeekNumber, getCurrentJuz, getWeekDedication } = require('../utils/rotation');
 
@@ -12,23 +14,14 @@ router.post('/access', async (req, res) => {
   }
 
   try {
-    const khatmaResult = await db.execute({
-      sql: 'SELECT * FROM khatma WHERE access_code = ?',
-      args: [code]
-    });
-
-    if (khatmaResult.rows.length === 0) {
+    const khatma = await Khatma.findOne({ access_code: code });
+    if (!khatma) {
       return res.status(404).json({ error: 'رمز الختمة غير صحيح' });
     }
 
-    const khatma = khatmaResult.rows[0];
+    const participants = await Participant.find({ khatma_id: khatma._id }).sort('slot_number');
 
-    const participantsResult = await db.execute({
-      sql: 'SELECT * FROM participants WHERE khatma_id = ? ORDER BY slot_number',
-      args: [khatma.id]
-    });
-
-    res.json({ khatma, participants: participantsResult.rows });
+    res.json({ khatma, participants });
   } catch (err) {
     res.status(500).json({ error: 'حدث خطأ' });
   }
@@ -43,41 +36,36 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const existing = await db.execute({
-      sql: 'SELECT id FROM khatma WHERE access_code = ?',
-      args: [accessCode]
-    });
-
-    if (existing.rows.length > 0) {
+    const existing = await Khatma.findOne({ access_code: accessCode });
+    if (existing) {
       return res.status(409).json({ error: 'رمز الدخول مستخدم بالفعل، اختر رمزاً آخر' });
     }
 
-    const result = await db.execute({
-      sql: 'INSERT INTO khatma (name, access_code, start_date) VALUES (?, ?, ?)',
-      args: [name, accessCode, startDate]
+    const khatma = await Khatma.create({
+      name,
+      access_code: accessCode,
+      start_date: startDate
     });
 
-    const khatmaId = Number(result.lastInsertRowid);
-
     if (participants && participants.length > 0) {
-      for (const p of participants) {
-        await db.execute({
-          sql: 'INSERT INTO participants (khatma_id, name, slot_number) VALUES (?, ?, ?)',
-          args: [khatmaId, p.name, p.slotNumber]
-        });
-      }
+      const docs = participants.map(p => ({
+        khatma_id: khatma._id,
+        name: p.name,
+        slot_number: p.slotNumber
+      }));
+      await Participant.insertMany(docs);
     }
 
     if (deceased && deceased.length > 0) {
-      for (const d of deceased) {
-        await db.execute({
-          sql: 'INSERT INTO deceased (khatma_id, name, death_date) VALUES (?, ?, ?)',
-          args: [khatmaId, d.name, d.deathDate]
-        });
-      }
+      const docs = deceased.map(d => ({
+        khatma_id: khatma._id,
+        name: d.name,
+        death_date: d.deathDate
+      }));
+      await Deceased.insertMany(docs);
     }
 
-    res.status(201).json({ id: khatmaId, message: 'تم إنشاء الختمة بنجاح' });
+    res.status(201).json({ id: khatma._id, message: 'تم إنشاء الختمة بنجاح' });
   } catch (err) {
     res.status(500).json({ error: 'حدث خطأ أثناء إنشاء الختمة' });
   }
@@ -89,29 +77,25 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
     const khatma = req.khatma;
     const weekNumber = getWeekNumber(khatma.start_date);
 
-    const participantsResult = await db.execute({
-      sql: 'SELECT * FROM participants WHERE khatma_id = ? ORDER BY slot_number',
-      args: [khatma.id]
-    });
+    const participants = await Participant.find({ khatma_id: khatma._id }).sort('slot_number');
+    const deceasedList = await Deceased.find({ khatma_id: khatma._id }).sort('death_date');
 
-    const deceasedResult = await db.execute({
-      sql: 'SELECT * FROM deceased WHERE khatma_id = ? ORDER BY death_date',
-      args: [khatma.id]
-    });
-
-    const participantsWithJuz = participantsResult.rows.map(p => ({
-      ...p,
+    const participantsWithJuz = participants.map(p => ({
+      _id: p._id,
+      khatma_id: p.khatma_id,
+      name: p.name,
+      slot_number: p.slot_number,
       currentJuz: getCurrentJuz(p.slot_number, weekNumber)
     }));
 
-    const dedication = getWeekDedication(deceasedResult.rows, weekNumber);
+    const dedication = getWeekDedication(deceasedList, weekNumber);
 
     res.json({
       khatma,
       weekNumber: weekNumber + 1,
       participants: participantsWithJuz,
       dedication,
-      deceased: deceasedResult.rows
+      deceased: deceasedList
     });
   } catch (err) {
     res.status(500).json({ error: 'حدث خطأ' });
@@ -121,24 +105,17 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
 // Update Khatma
 router.put('/:id', authMiddleware, async (req, res) => {
   const { name, startDate } = req.body;
-  const khatma = req.khatma;
+  const update = {};
 
-  const updates = [];
-  const values = [];
+  if (name) update.name = name;
+  if (startDate) update.start_date = startDate;
 
-  if (name) { updates.push('name = ?'); values.push(name); }
-  if (startDate) { updates.push('start_date = ?'); values.push(startDate); }
-
-  if (updates.length === 0) {
+  if (Object.keys(update).length === 0) {
     return res.status(400).json({ error: 'لا توجد بيانات للتحديث' });
   }
 
   try {
-    values.push(khatma.id);
-    await db.execute({
-      sql: `UPDATE khatma SET ${updates.join(', ')} WHERE id = ?`,
-      args: values
-    });
+    await Khatma.findByIdAndUpdate(req.khatma._id, update);
     res.json({ message: 'تم التحديث بنجاح' });
   } catch (err) {
     res.status(500).json({ error: 'حدث خطأ' });

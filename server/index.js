@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
-const { initDB } = require('./db/init');
+const { connectDB } = require('./db/init');
 
 const khatmaRoutes = require('./routes/khatma');
 const participantRoutes = require('./routes/participants');
@@ -12,26 +11,31 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Connect to MongoDB before handling requests
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(500).json({ error: 'خطأ في الاتصال بقاعدة البيانات' });
+  }
+});
+
 // API routes
 app.use('/api/khatma', khatmaRoutes);
 app.use('/api/khatma/:id/participants', participantRoutes);
 app.use('/api/khatma/:id/deceased', deceasedRoutes);
 
-// Serve frontend in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/dist')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
-  });
-}
+// Health check
+app.get('/api', (req, res) => {
+  res.json({ status: 'ok', message: 'Khatma API is running' });
+});
 
-// Initialize DB and start server (for local dev)
+// Local dev server
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
-  initDB().then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
