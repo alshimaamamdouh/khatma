@@ -1,0 +1,481 @@
+:root {
+  --primary: #1b5e20;
+  --primary-light: #2e7d32;
+  --primary-dark: #0d3311;
+  --gold: #c8a415;
+  --gold-light: #f5e6a3;
+  --bg: #f5f0e8;
+  --card-bg: #ffffff;
+  --text: #2c2c2c;
+  --text-light: #666;
+  --border: #e0d8c8;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --radius: 12px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  direction: rtl;
+}
+
+body {
+  font-family: 'Tajawal', sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  flex: 1;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  padding: 16px 24px;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.header h1 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.header p {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.header-nav {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.header-nav a {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  font-size: 0.85rem;
+  padding: 4px 12px;
+  border-radius: 16px;
+  transition: background 0.2s;
+}
+
+.header-nav a:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+/* Cards */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.card-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 1rem;
+  direction: rtl;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Buttons */
+.btn {
+  display: inline-block;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  text-align: center;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-light);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+}
+
+.btn-secondary:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-danger {
+  background: #c62828;
+  color: white;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+.btn-danger:hover {
+  background: #e53935;
+}
+
+.btn-block {
+  display: block;
+  width: 100%;
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.85rem;
+}
+
+/* Juz Grid */
+.juz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.juz-card {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  transition: all 0.2s;
+  cursor: default;
+}
+
+.juz-card.highlighted {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+  box-shadow: 0 2px 8px rgba(27, 94, 32, 0.15);
+}
+
+.juz-card .juz-number {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.juz-card .participant-name {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+
+/* Big Juz Display */
+.big-juz {
+  text-align: center;
+  padding: 30px;
+  margin: 20px 0;
+}
+
+.big-juz .juz-label {
+  font-size: 1rem;
+  color: var(--text-light);
+  margin-bottom: 8px;
+}
+
+.big-juz .juz-name {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.big-juz .juz-num {
+  font-size: 1.2rem;
+  color: var(--text-light);
+}
+
+/* Dedication Box */
+.dedication-box {
+  background: linear-gradient(135deg, #fff8e1, #fff3cd);
+  border: 2px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.dedication-box .label {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 8px;
+}
+
+.dedication-box .deceased-name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #5d4037;
+}
+
+.dedication-box .death-date {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+
+.dedication-box.anniversary {
+  border-color: #c62828;
+  background: linear-gradient(135deg, #ffebee, #fce4ec);
+}
+
+.dedication-box.anniversary .deceased-name {
+  color: #c62828;
+}
+
+/* Week Info */
+.week-info {
+  text-align: center;
+  margin-bottom: 20px;
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.week-info strong {
+  color: var(--primary);
+}
+
+/* Participant Select Grid */
+.participant-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.participant-select-card {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.participant-select-card:hover {
+  border-color: var(--primary);
+  background: #e8f5e9;
+  transform: translateY(-2px);
+}
+
+.participant-select-card .slot-num {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+
+/* Home page */
+.home-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+}
+
+.home-page .bismillah {
+  font-size: 1.8rem;
+  color: var(--primary);
+  margin-bottom: 30px;
+  font-weight: 700;
+}
+
+.access-form {
+  width: 100%;
+  max-width: 400px;
+}
+
+.access-form input {
+  text-align: center;
+  font-size: 1.2rem;
+  letter-spacing: 2px;
+}
+
+.home-links {
+  margin-top: 24px;
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+/* Error & Messages */
+.error-msg {
+  background: #ffebee;
+  color: #c62828;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.success-msg {
+  background: #e8f5e9;
+  color: #1b5e20;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-light);
+  font-size: 1.1rem;
+}
+
+/* Admin */
+.admin-section {
+  margin-bottom: 30px;
+}
+
+.admin-section h3 {
+  color: var(--primary);
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+}
+
+.admin-list {
+  list-style: none;
+  padding: 0;
+}
+
+.admin-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-list li:last-child {
+  border-bottom: none;
+}
+
+.inline-form {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.inline-form .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.inline-form .btn {
+  flex-shrink: 0;
+  height: 42px;
+}
+
+.access-code-display {
+  background: var(--primary-dark);
+  color: var(--gold-light);
+  padding: 16px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  margin: 16px 0;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .container {
+    padding: 12px;
+  }
+
+  .header h1 {
+    font-size: 1.4rem;
+  }
+
+  .juz-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .participant-select-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .big-juz .juz-name {
+    font-size: 1.8rem;
+  }
+
+  .inline-form {
+    flex-direction: column;
+  }
+
+  .inline-form .btn {
+    width: 100%;
+  }
+}
