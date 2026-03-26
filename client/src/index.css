@@ -448,6 +448,26 @@ body {
   margin: 16px 0;
 }
 
+/* Paused Banner */
+.paused-banner {
+  background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  border: 2px solid #f57c00;
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #e65100;
+}
+
+.paused-banner .paused-dates {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-light);
+  margin-top: 8px;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .container {

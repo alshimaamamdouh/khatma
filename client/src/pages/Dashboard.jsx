@@ -33,7 +33,7 @@ function Dashboard() {
   if (!data) return null;
 
   const myAssignment = participantId
-    ? data.participants.find(p => p.id === Number(participantId))
+    ? data.participants.find(p => p._id === participantId || p.id === Number(participantId))
     : null;
 
   return (
@@ -45,9 +45,18 @@ function Dashboard() {
         </div>
       </div>
 
+      {data.paused && (
+        <div className="paused-banner">
+          الختمة متوقفة مؤقتاً
+          <div className="paused-dates">
+            من {new Date(data.khatma.paused_from).toLocaleDateString('ar-EG')} إلى {new Date(data.khatma.paused_to).toLocaleDateString('ar-EG')}
+          </div>
+        </div>
+      )}
+
       <DeceasedInfo dedication={data.dedication} />
 
-      {myAssignment && (
+      {!data.paused && myAssignment && (
         <div className="card big-juz">
           <div className="juz-label">
             {participantName}، جزؤك لهذا الأسبوع هو
@@ -57,13 +66,15 @@ function Dashboard() {
         </div>
       )}
 
-      <div className="card">
-        <h3 className="card-title">توزيع الأجزاء</h3>
-        <KhatmaGrid
-          participants={data.participants}
-          highlightJuz={myAssignment?.currentJuz}
-        />
-      </div>
+      {!data.paused && (
+        <div className="card">
+          <h3 className="card-title">توزيع الأجزاء</h3>
+          <KhatmaGrid
+            participants={data.participants}
+            highlightJuz={myAssignment?.currentJuz}
+          />
+        </div>
+      )}
     </div>
   );
 }

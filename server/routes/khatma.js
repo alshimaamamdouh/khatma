@@ -4,7 +4,7 @@ const Khatma = require('../models/Khatma');
 const Participant = require('../models/Participant');
 const Deceased = require('../models/Deceased');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-const { getWeekNumber, getCurrentJuz, getWeekDedication } = require('../utils/rotation');
+const { getWeekNumber, getCurrentJuz, getWeekDedication, isPaused } = require('../utils/rotation');
 
 // Access a Khatma by code (participant login)
 router.post('/access', async (req, res) => {
@@ -49,6 +49,8 @@ router.post('/admin-login', async (req, res) => {
         name: khatma.name,
         access_code: khatma.access_code,
         start_date: khatma.start_date,
+        paused_from: khatma.paused_from,
+        paused_to: khatma.paused_to,
         created_at: khatma.created_at
       },
       participants,
@@ -108,7 +110,8 @@ router.post('/', async (req, res) => {
 router.get('/:id/dashboard', authMiddleware, async (req, res) => {
   try {
     const khatma = req.khatma;
-    const weekNumber = getWeekNumber(khatma.start_date);
+    const paused = isPaused(khatma.paused_from, khatma.paused_to);
+    const weekNumber = getWeekNumber(khatma.start_date, new Date(), khatma.paused_from, khatma.paused_to);
 
     const participants = await Participant.find({ khatma_id: khatma._id }).sort('slot_number');
     const deceasedList = await Deceased.find({ khatma_id: khatma._id }).sort('death_date');
@@ -128,9 +131,12 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
         _id: khatma._id,
         name: khatma.name,
         access_code: khatma.access_code,
-        start_date: khatma.start_date
+        start_date: khatma.start_date,
+        paused_from: khatma.paused_from,
+        paused_to: khatma.paused_to
       },
       weekNumber: weekNumber + 1,
+      paused,
       participants: participantsWithJuz,
       dedication,
       deceased: deceasedList
@@ -142,11 +148,13 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
 
 // Update Khatma (admin only)
 router.put('/:id', adminMiddleware, async (req, res) => {
-  const { name, startDate } = req.body;
+  const { name, startDate, pausedFrom, pausedTo } = req.body;
   const update = {};
 
   if (name) update.name = name;
   if (startDate) update.start_date = startDate;
+  if (pausedFrom !== undefined) update.paused_from = pausedFrom || null;
+  if (pausedTo !== undefined) update.paused_to = pausedTo || null;
 
   if (Object.keys(update).length === 0) {
     return res.status(400).json({ error: 'لا توجد بيانات للتحديث' });

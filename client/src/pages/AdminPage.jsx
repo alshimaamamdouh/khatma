@@ -41,6 +41,10 @@ function AdminPage() {
   const [editStartDate, setEditStartDate] = useState('');
   const [showEditKhatma, setShowEditKhatma] = useState(false);
 
+  // Pause
+  const [pausedFrom, setPausedFrom] = useState('');
+  const [pausedTo, setPausedTo] = useState('');
+
   const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
@@ -91,6 +95,8 @@ function AdminPage() {
       setDeceasedList(data.deceased);
       setEditKhatmaName(data.khatma.name);
       setEditStartDate(data.khatma.start_date);
+      setPausedFrom(data.khatma.paused_from || '');
+      setPausedTo(data.khatma.paused_to || '');
       localStorage.setItem('khatmaCode', data.khatma.access_code);
       localStorage.setItem('khatmaId', data.khatma._id);
       localStorage.setItem('adminPassword', loginPassword);
@@ -111,6 +117,37 @@ function AdminPage() {
       setKhatmaData({ ...khatmaData, name: editKhatmaName, start_date: editStartDate });
       setSuccess('تم تحديث بيانات الختمة');
       setShowEditKhatma(false);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handlePause = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!pausedFrom || !pausedTo) {
+      setError('تاريخ البداية والنهاية مطلوبان');
+      return;
+    }
+
+    try {
+      await api.updateKhatma(khatmaId, { pausedFrom, pausedTo });
+      setKhatmaData({ ...khatmaData, paused_from: pausedFrom, paused_to: pausedTo });
+      setSuccess('تم إيقاف الختمة مؤقتاً');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleResume = async () => {
+    setError('');
+    try {
+      await api.updateKhatma(khatmaId, { pausedFrom: '', pausedTo: '' });
+      setPausedFrom('');
+      setPausedTo('');
+      setKhatmaData({ ...khatmaData, paused_from: null, paused_to: null });
+      setSuccess('تم استئناف الختمة');
     } catch (err) {
       setError(err.message);
     }
@@ -389,6 +426,49 @@ function AdminPage() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="submit" className="btn btn-primary">حفظ</button>
               <button type="button" className="btn btn-secondary" onClick={() => setShowEditKhatma(false)}>إلغاء</button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* Pause/Resume */}
+      <div className="card admin-section">
+        <h3>إيقاف مؤقت للختمة</h3>
+        {khatmaData?.paused_from && khatmaData?.paused_to ? (
+          <div>
+            <div className="paused-banner" style={{ marginBottom: 12 }}>
+              الختمة متوقفة مؤقتاً
+              <div className="paused-dates">
+                من {new Date(khatmaData.paused_from).toLocaleDateString('ar-EG')} إلى {new Date(khatmaData.paused_to).toLocaleDateString('ar-EG')}
+              </div>
+            </div>
+            <button className="btn btn-primary btn-block" onClick={handleResume}>
+              استئناف الختمة
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handlePause}>
+            <p style={{ marginBottom: 12, color: 'var(--text-light)', fontSize: '0.9rem' }}>
+              يمكنك إيقاف الختمة مؤقتاً خلال فترة معينة (مثل رمضان). لن يتغير توزيع الأجزاء خلال فترة التوقف.
+            </p>
+            <div className="inline-form">
+              <div className="form-group">
+                <label>من تاريخ</label>
+                <input
+                  type="date"
+                  value={pausedFrom}
+                  onChange={(e) => setPausedFrom(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>إلى تاريخ</label>
+                <input
+                  type="date"
+                  value={pausedTo}
+                  onChange={(e) => setPausedTo(e.target.value)}
+                />
+              </div>
+              <button type="submit" className="btn btn-danger">إيقاف</button>
             </div>
           </form>
         )}
