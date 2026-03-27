@@ -53,6 +53,13 @@ function AdminPage() {
   const [pausedFrom, setPausedFrom] = useState('');
   const [pausedTo, setPausedTo] = useState('');
 
+  // Hijri
+  const [useHijri, setUseHijri] = useState(false);
+
+  // Bulk add
+  const [bulkAddMode, setBulkAddMode] = useState(false);
+  const [bulkNames, setBulkNames] = useState('');
+
   const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
@@ -70,14 +77,15 @@ function AdminPage() {
         adminPassword,
         startDate,
         rotationType,
-        customDays: rotationType === 'custom' ? Number(customDays) : null
+        customDays: rotationType === 'custom' ? Number(customDays) : null,
+        useHijri
       });
       setKhatmaId(result.id);
       setAccessCode(code);
       localStorage.setItem('khatmaCode', code);
       localStorage.setItem('khatmaId', result.id);
       localStorage.setItem('adminPassword', adminPassword);
-      setKhatmaData({ name, start_date: startDate });
+      setKhatmaData({ name, start_date: startDate, use_hijri: useHijri });
       setEditKhatmaName(name);
       setEditStartDate(startDate);
       setSuccess('تم إنشاء الختمة بنجاح!');
@@ -109,6 +117,7 @@ function AdminPage() {
       setCustomDays(data.khatma.custom_days || '');
       setPausedFrom(data.khatma.paused_from || '');
       setPausedTo(data.khatma.paused_to || '');
+      setUseHijri(data.khatma.use_hijri || false);
       localStorage.setItem('khatmaCode', data.khatma.access_code);
       localStorage.setItem('khatmaId', data.khatma._id);
       localStorage.setItem('adminPassword', loginPassword);
@@ -126,9 +135,10 @@ function AdminPage() {
         name: editKhatmaName,
         startDate: editStartDate,
         rotationType,
-        customDays: rotationType === 'custom' ? Number(customDays) : null
+        customDays: rotationType === 'custom' ? Number(customDays) : null,
+        useHijri
       });
-      setKhatmaData({ ...khatmaData, name: editKhatmaName, start_date: editStartDate, rotation_type: rotationType, custom_days: customDays });
+      setKhatmaData({ ...khatmaData, name: editKhatmaName, start_date: editStartDate, rotation_type: rotationType, custom_days: customDays, use_hijri: useHijri });
       setSuccess('تم تحديث بيانات الختمة');
       setShowEditKhatma(false);
     } catch (err) {
@@ -269,6 +279,47 @@ function AdminPage() {
     }
   };
 
+  const handleBulkAdd = async (e) => {
+    e.preventDefault();
+    setError('');
+    const names = bulkNames.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+    if (names.length === 0) {
+      setError('الرجاء إدخال اسم واحد على الأقل');
+      return;
+    }
+
+    const currentTaken = new Set(participants.map(p => p.slot_number));
+    const currentAvailable = Array.from({ length: 30 }, (_, i) => i + 1).filter(n => !currentTaken.has(n));
+
+    if (names.length > currentAvailable.length) {
+      setError(`عدد الأسماء (${names.length}) أكبر من عدد الأماكن الشاغرة (${currentAvailable.length})`);
+      return;
+    }
+
+    const newParticipants = [];
+    for (let i = 0; i < names.length; i++) {
+      try {
+        const result = await api.addParticipant(khatmaId, {
+          name: names[i],
+          slotNumber: currentAvailable[i]
+        });
+        newParticipants.push({
+          _id: result.participant._id,
+          name: names[i],
+          slot_number: currentAvailable[i]
+        });
+      } catch (err) {
+        setError(`خطأ عند إضافة "${names[i]}": ${err.message}`);
+        break;
+      }
+    }
+    if (newParticipants.length > 0) {
+      setParticipants([...participants, ...newParticipants]);
+      setBulkNames('');
+      setSuccess(`تمت إضافة ${newParticipants.length} مشارك بنجاح`);
+    }
+  };
+
   const takenSlots = new Set(participants.map(p => p.slot_number));
   const availableSlots = Array.from({ length: 30 }, (_, i) => i + 1)
     .filter(n => !takenSlots.has(n));
@@ -376,6 +427,18 @@ function AdminPage() {
                 />
               </div>
             )}
+
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={useHijri}
+                  onChange={(e) => setUseHijri(e.target.checked)}
+                  style={{ width: 'auto' }}
+                />
+                عرض التواريخ بالتقويم الهجري
+              </label>
+            </div>
 
             <button type="submit" className="btn btn-primary btn-block">
               إنشاء الختمة
@@ -506,6 +569,17 @@ function AdminPage() {
                 />
               </div>
             )}
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={useHijri}
+                  onChange={(e) => setUseHijri(e.target.checked)}
+                  style={{ width: 'auto' }}
+                />
+                عرض التواريخ بالتقويم الهجري
+              </label>
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="submit" className="btn btn-primary">حفظ</button>
               <button type="button" className="btn btn-secondary" onClick={() => setShowEditKhatma(false)}>إلغاء</button>
@@ -561,28 +635,71 @@ function AdminPage() {
       <div className="card admin-section">
         <h3>المشاركون ({participants.length}/30)</h3>
 
-        <form onSubmit={handleAddParticipant} className="inline-form">
-          <div className="form-group">
-            <input
-              type="text"
-              placeholder="اسم المشارك"
-              value={newParticipantName}
-              onChange={(e) => setNewParticipantName(e.target.value)}
-            />
-          </div>
-          <div className="form-group" style={{ maxWidth: 120 }}>
-            <select
-              value={newParticipantSlot}
-              onChange={(e) => setNewParticipantSlot(e.target.value)}
-            >
-              <option value="">الترتيب</option>
-              {availableSlots.map(n => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </div>
-          <button type="submit" className="btn btn-primary">إضافة</button>
-        </form>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <button
+            className={`btn btn-sm ${!bulkAddMode ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setBulkAddMode(false)}
+          >
+            إضافة فردية
+          </button>
+          <button
+            className={`btn btn-sm ${bulkAddMode ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setBulkAddMode(true)}
+          >
+            إضافة مجموعة
+          </button>
+        </div>
+
+        {!bulkAddMode ? (
+          <form onSubmit={handleAddParticipant} className="inline-form">
+            <div className="form-group">
+              <input
+                type="text"
+                placeholder="اسم المشارك"
+                value={newParticipantName}
+                onChange={(e) => setNewParticipantName(e.target.value)}
+              />
+            </div>
+            <div className="form-group" style={{ maxWidth: 120 }}>
+              <select
+                value={newParticipantSlot}
+                onChange={(e) => setNewParticipantSlot(e.target.value)}
+              >
+                <option value="">الترتيب</option>
+                {availableSlots.map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
+            <button type="submit" className="btn btn-primary">إضافة</button>
+          </form>
+        ) : (
+          <form onSubmit={handleBulkAdd}>
+            <div className="form-group">
+              <label>أدخل الأسماء (اسم واحد في كل سطر)</label>
+              <textarea
+                value={bulkNames}
+                onChange={(e) => setBulkNames(e.target.value)}
+                placeholder={"محمد أحمد\nعلي حسن\nفاطمة محمد"}
+                rows={6}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: '2px solid var(--border)',
+                  borderRadius: 8,
+                  fontFamily: "'Tajawal', sans-serif",
+                  fontSize: '1rem',
+                  direction: 'rtl',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 12 }}>
+              سيتم تعيين أرقام الترتيب تلقائياً بدءاً من أول رقم شاغر. الأماكن الشاغرة: {availableSlots.length}
+            </p>
+            <button type="submit" className="btn btn-primary btn-block">إضافة المجموعة</button>
+          </form>
+        )}
 
         {participants.length > 0 && (
           <ul className="admin-list" style={{ marginTop: 12 }}>

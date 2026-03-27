@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { getJuzName } from '../utils/juzNames';
 import KhatmaGrid from '../components/KhatmaGrid';
@@ -7,6 +7,7 @@ import DeceasedInfo from '../components/DeceasedInfo';
 
 function Dashboard() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [completions, setCompletions] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,6 +15,22 @@ function Dashboard() {
 
   const participantId = localStorage.getItem('participantId');
   const participantName = localStorage.getItem('participantName');
+
+  const handleLogout = () => {
+    localStorage.removeItem('khatmaCode');
+    localStorage.removeItem('khatmaId');
+    localStorage.removeItem('khatmaName');
+    navigate('/');
+  };
+
+  const handleWhatsAppShare = () => {
+    const khatmaCode = localStorage.getItem('khatmaCode') || '';
+    const khatmaName = data?.khatma?.name || '';
+    const appUrl = window.location.origin;
+    const text = `ختمة: ${khatmaName}\nرمز الدخول: ${khatmaCode}\nرابط التطبيق: ${appUrl}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
 
   const fetchData = async () => {
     try {
@@ -108,7 +125,7 @@ function Dashboard() {
         </div>
       )}
 
-      <DeceasedInfo dedication={data.dedication} />
+      <DeceasedInfo dedication={data.dedication} useHijri={data.khatma.use_hijri} />
 
       {!data.paused && (
         <div className="card">
@@ -121,7 +138,11 @@ function Dashboard() {
 
               return (
                 <div key={juzNum} className={`juz-card ${isMyJuz ? 'highlighted' : ''} ${completed ? 'completed' : ''}`}>
-                  <div className="juz-number">{juzNum}</div>
+                  <div className="juz-number">
+                    <a href={`https://quran.com/juz/${juzNum}`} target="_blank" rel="noopener noreferrer">
+                      {juzNum}
+                    </a>
+                  </div>
                   <div className="participant-name">
                     {participant ? participant.name : 'شاغر'}
                   </div>
@@ -150,6 +171,18 @@ function Dashboard() {
           </div>
         </div>
       )}
+
+      <div className="dashboard-actions no-print">
+        <button className="btn btn-secondary" onClick={() => window.print()}>
+          طباعة
+        </button>
+        <button className="btn btn-primary" onClick={handleWhatsAppShare}>
+          مشاركة عبر واتساب
+        </button>
+        <button className="btn btn-secondary" onClick={handleLogout}>
+          تسجيل الخروج
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,6 @@
-function DeceasedInfo({ dedication }) {
+import { formatDate } from '../utils/hijriDate';
+
+function DeceasedInfo({ dedication, useHijri }) {
   if (!dedication || !dedication.dedicated || dedication.dedicated.length === 0) {
     return (
       <div className="dedication-box">
@@ -17,11 +19,7 @@ function DeceasedInfo({ dedication }) {
       </div>
 
       {dedicated.map((person, i) => {
-        const deathDate = new Date(person.death_date).toLocaleDateString('ar-EG', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
+        const deathDate = formatDate(person.death_date, useHijri);
         const isAnniversary = anniversaryPeople?.some(
           ap => ap._id === person._id
         );

@@ -13,6 +13,15 @@
   --radius: 12px;
 }
 
+[data-theme="dark"] {
+  --bg: #1a1a2e;
+  --card-bg: #16213e;
+  --text: #e0e0e0;
+  --text-light: #a0a0a0;
+  --border: #2a2a4a;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -629,5 +638,138 @@ body {
 
   .inline-form .btn {
     width: 100%;
+  }
+}
+
+/* Dark Mode Toggle */
+.dark-mode-toggle {
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.dark-mode-toggle:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+/* Dashboard Actions */
+.dashboard-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+/* Juz Link */
+.juz-card .juz-number a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.juz-card .juz-number a:hover {
+  text-decoration: underline;
+}
+
+/* Dark mode overrides for special backgrounds */
+[data-theme="dark"] .error-msg {
+  background: #3d1111;
+  color: #ff8a80;
+}
+
+[data-theme="dark"] .success-msg {
+  background: #0d3311;
+  color: #69f0ae;
+}
+
+[data-theme="dark"] .dedication-box {
+  background: linear-gradient(135deg, #2a2416, #2a2210);
+  border-color: var(--gold);
+}
+
+[data-theme="dark"] .dedication-box .deceased-name {
+  color: var(--gold-light);
+}
+
+[data-theme="dark"] .juz-card.highlighted {
+  background: linear-gradient(135deg, #0d3311, #1a3a1a);
+}
+
+[data-theme="dark"] .khatma-complete-banner {
+  background: linear-gradient(135deg, #0d3311, #1a3a1a);
+}
+
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select {
+  background: var(--card-bg);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+/* Print Styles */
+@media print {
+  .header,
+  .header-nav,
+  .no-print,
+  .dashboard-actions,
+  .btn-complete,
+  .btn-undo-complete,
+  .completion-progress,
+  .paused-banner {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+    font-size: 12pt;
+  }
+
+  .app,
+  .container {
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  .card {
+    box-shadow: none;
+    border: none;
+    padding: 10px 0;
+    margin-bottom: 10px;
+  }
+
+  .dedication-box {
+    border: 1px solid #999;
+    background: #f9f9f9 !important;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+
+  .juz-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .juz-card {
+    border: 1px solid #ccc;
+    padding: 8px;
+    page-break-inside: avoid;
+  }
+
+  .juz-card.completed {
+    background: #e8f5e9 !important;
+  }
+
+  .juz-card .juz-number a {
+    color: black;
+    text-decoration: none;
   }
 }

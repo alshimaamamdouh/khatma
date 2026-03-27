@@ -9,6 +9,7 @@ const khatmaSchema = new mongoose.Schema({
   custom_days: { type: Number, default: null },
   paused_from: { type: String, default: null },
   paused_to: { type: String, default: null },
+  use_hijri: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now }
 });
 

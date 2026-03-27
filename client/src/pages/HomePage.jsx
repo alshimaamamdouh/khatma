@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
 
@@ -7,6 +7,14 @@ function HomePage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const savedCode = localStorage.getItem('khatmaCode');
+    const savedId = localStorage.getItem('khatmaId');
+    if (savedCode && savedId) {
+      navigate(`/khatma/${savedId}/dashboard`);
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

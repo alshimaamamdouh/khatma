@@ -53,6 +53,7 @@ router.post('/admin-login', async (req, res) => {
         custom_days: khatma.custom_days,
         paused_from: khatma.paused_from,
         paused_to: khatma.paused_to,
+        use_hijri: khatma.use_hijri,
         created_at: khatma.created_at
       },
       participants,
@@ -65,7 +66,7 @@ router.post('/admin-login', async (req, res) => {
 
 // Create a new Khatma
 router.post('/', async (req, res) => {
-  const { name, accessCode, adminPassword, startDate, rotationType, customDays, participants, deceased } = req.body;
+  const { name, accessCode, adminPassword, startDate, rotationType, customDays, useHijri, participants, deceased } = req.body;
 
   if (!name || !accessCode || !adminPassword || !startDate) {
     return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
@@ -83,7 +84,8 @@ router.post('/', async (req, res) => {
       admin_password: adminPassword,
       start_date: startDate,
       rotation_type: rotationType || 'weekly',
-      custom_days: rotationType === 'custom' ? (customDays || 7) : null
+      custom_days: rotationType === 'custom' ? (customDays || 7) : null,
+      use_hijri: useHijri || false
     });
 
     if (participants && participants.length > 0) {
@@ -145,7 +147,8 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
         rotation_type: khatma.rotation_type,
         custom_days: khatma.custom_days,
         paused_from: khatma.paused_from,
-        paused_to: khatma.paused_to
+        paused_to: khatma.paused_to,
+        use_hijri: khatma.use_hijri
       },
       cycleNumber: cycleNumber + 1,
       rotationLabel,
@@ -161,7 +164,7 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
 
 // Update Khatma (admin only)
 router.put('/:id', adminMiddleware, async (req, res) => {
-  const { name, startDate, rotationType, customDays, pausedFrom, pausedTo } = req.body;
+  const { name, startDate, rotationType, customDays, pausedFrom, pausedTo, useHijri } = req.body;
   const update = {};
 
   if (name) update.name = name;
@@ -172,6 +175,7 @@ router.put('/:id', adminMiddleware, async (req, res) => {
   }
   if (pausedFrom !== undefined) update.paused_from = pausedFrom || null;
   if (pausedTo !== undefined) update.paused_to = pausedTo || null;
+  if (useHijri !== undefined) update.use_hijri = useHijri;
 
   if (Object.keys(update).length === 0) {
     return res.status(400).json({ error: 'لا توجد بيانات للتحديث' });
