@@ -92,7 +92,7 @@ function Dashboard() {
       <div className="card">
         <h2 className="card-title">{data.khatma.name}</h2>
         <div className="week-info">
-          الدورة <strong>{data.cycleNumber}</strong> — التكرار: {data.rotationLabel}
+          الختمة رقم <strong>{data.currentKhatmaNumber}</strong> — الدورة <strong>{data.cycleNumber}</strong> — التكرار: {data.rotationLabel}
         </div>
         {completions && (
           <div className="completion-progress">

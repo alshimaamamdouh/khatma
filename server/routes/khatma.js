@@ -54,6 +54,7 @@ router.post('/admin-login', async (req, res) => {
         paused_from: khatma.paused_from,
         paused_to: khatma.paused_to,
         use_hijri: khatma.use_hijri,
+        khatma_number: khatma.khatma_number,
         created_at: khatma.created_at
       },
       participants,
@@ -66,7 +67,7 @@ router.post('/admin-login', async (req, res) => {
 
 // Create a new Khatma
 router.post('/', async (req, res) => {
-  const { name, accessCode, adminPassword, startDate, rotationType, customDays, useHijri, participants, deceased } = req.body;
+  const { name, accessCode, adminPassword, startDate, rotationType, customDays, useHijri, khatmaNumber, participants, deceased } = req.body;
 
   if (!name || !accessCode || !adminPassword || !startDate) {
     return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
@@ -85,7 +86,8 @@ router.post('/', async (req, res) => {
       start_date: startDate,
       rotation_type: rotationType || 'weekly',
       custom_days: rotationType === 'custom' ? (customDays || 7) : null,
-      use_hijri: useHijri || false
+      use_hijri: useHijri || false,
+      khatma_number: khatmaNumber || 1
     });
 
     if (participants && participants.length > 0) {
@@ -148,9 +150,11 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
         custom_days: khatma.custom_days,
         paused_from: khatma.paused_from,
         paused_to: khatma.paused_to,
-        use_hijri: khatma.use_hijri
+        use_hijri: khatma.use_hijri,
+        khatma_number: khatma.khatma_number
       },
       cycleNumber: cycleNumber + 1,
+      currentKhatmaNumber: (khatma.khatma_number || 1) + cycleNumber,
       rotationLabel,
       paused,
       participants: participantsWithJuz,
@@ -169,6 +173,7 @@ router.put('/:id', adminMiddleware, async (req, res) => {
 
   if (name) update.name = name;
   if (startDate) update.start_date = startDate;
+  if (req.body.khatmaNumber !== undefined) update.khatma_number = req.body.khatmaNumber;
   if (rotationType) {
     update.rotation_type = rotationType;
     update.custom_days = rotationType === 'custom' ? (customDays || 7) : null;

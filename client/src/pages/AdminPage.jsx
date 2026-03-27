@@ -56,6 +56,9 @@ function AdminPage() {
   // Hijri
   const [useHijri, setUseHijri] = useState(false);
 
+  // Khatma number
+  const [khatmaNumber, setKhatmaNumber] = useState(1);
+
   // Bulk add
   const [bulkAddMode, setBulkAddMode] = useState(false);
   const [bulkNames, setBulkNames] = useState('');
@@ -78,14 +81,15 @@ function AdminPage() {
         startDate,
         rotationType,
         customDays: rotationType === 'custom' ? Number(customDays) : null,
-        useHijri
+        useHijri,
+        khatmaNumber: Number(khatmaNumber)
       });
       setKhatmaId(result.id);
       setAccessCode(code);
       localStorage.setItem('khatmaCode', code);
       localStorage.setItem('khatmaId', result.id);
       localStorage.setItem('adminPassword', adminPassword);
-      setKhatmaData({ name, start_date: startDate, use_hijri: useHijri });
+      setKhatmaData({ name, start_date: startDate, use_hijri: useHijri, khatma_number: Number(khatmaNumber) });
       setEditKhatmaName(name);
       setEditStartDate(startDate);
       setSuccess('تم إنشاء الختمة بنجاح!');
@@ -118,6 +122,7 @@ function AdminPage() {
       setPausedFrom(data.khatma.paused_from || '');
       setPausedTo(data.khatma.paused_to || '');
       setUseHijri(data.khatma.use_hijri || false);
+      setKhatmaNumber(data.khatma.khatma_number || 1);
       localStorage.setItem('khatmaCode', data.khatma.access_code);
       localStorage.setItem('khatmaId', data.khatma._id);
       localStorage.setItem('adminPassword', loginPassword);
@@ -136,9 +141,10 @@ function AdminPage() {
         startDate: editStartDate,
         rotationType,
         customDays: rotationType === 'custom' ? Number(customDays) : null,
-        useHijri
+        useHijri,
+        khatmaNumber: Number(khatmaNumber)
       });
-      setKhatmaData({ ...khatmaData, name: editKhatmaName, start_date: editStartDate, rotation_type: rotationType, custom_days: customDays, use_hijri: useHijri });
+      setKhatmaData({ ...khatmaData, name: editKhatmaName, start_date: editStartDate, rotation_type: rotationType, custom_days: customDays, use_hijri: useHijri, khatma_number: Number(khatmaNumber) });
       setSuccess('تم تحديث بيانات الختمة');
       setShowEditKhatma(false);
     } catch (err) {
@@ -440,6 +446,16 @@ function AdminPage() {
               </label>
             </div>
 
+            <div className="form-group">
+              <label>رقم الختمة (يبدأ من هذا الرقم ويزيد تلقائياً)</label>
+              <input
+                type="number"
+                min="1"
+                value={khatmaNumber}
+                onChange={(e) => setKhatmaNumber(e.target.value)}
+              />
+            </div>
+
             <button type="submit" className="btn btn-primary btn-block">
               إنشاء الختمة
             </button>
@@ -579,6 +595,15 @@ function AdminPage() {
                 />
                 عرض التواريخ بالتقويم الهجري
               </label>
+            </div>
+            <div className="form-group">
+              <label>رقم الختمة الأولي</label>
+              <input
+                type="number"
+                min="1"
+                value={khatmaNumber}
+                onChange={(e) => setKhatmaNumber(e.target.value)}
+              />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="submit" className="btn btn-primary">حفظ</button>
