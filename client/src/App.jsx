@@ -3,6 +3,8 @@ import HomePage from './pages/HomePage';
 import SelectParticipant from './pages/SelectParticipant';
 import Dashboard from './pages/Dashboard';
 import AdminPage from './pages/AdminPage';
+import CreateKhatma from './pages/CreateKhatma';
+import ManageKhatma from './pages/ManageKhatma';
 import HistoryPage from './pages/HistoryPage';
 import StatsPage from './pages/StatsPage';
 import NotFound from './pages/NotFound';
@@ -16,6 +18,8 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/create" element={<CreateKhatma />} />
+          <Route path="/admin/manage" element={<ManageKhatma />} />
           <Route path="/khatma/:id/select" element={<SelectParticipant />} />
           <Route path="/khatma/:id/dashboard" element={<Dashboard />} />
           <Route path="/khatma/:id/history" element={<HistoryPage />} />
