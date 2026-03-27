@@ -21,9 +21,9 @@ function HomePage() {
     try {
       const data = await api.access(code.trim());
       localStorage.setItem('khatmaCode', code.trim());
-      localStorage.setItem('khatmaId', data.khatma.id);
+      localStorage.setItem('khatmaId', data.khatma._id);
       localStorage.setItem('khatmaName', data.khatma.name);
-      navigate(`/khatma/${data.khatma.id}/select`);
+      navigate(`/khatma/${data.khatma._id}/select`);
     } catch (err) {
       setError(err.message);
     } finally {

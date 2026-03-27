@@ -21,6 +21,10 @@ function AdminPage() {
   const [loginCode, setLoginCode] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
+  // Password visibility
+  const [showPassword, setShowPassword] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+
   // State
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -320,12 +324,21 @@ function AdminPage() {
 
             <div className="form-group">
               <label>كلمة مرور المسؤول (خاصة بك فقط)</label>
-              <input
-                type="password"
-                placeholder="كلمة مرور لإدارة الختمة"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-              />
+              <div className="password-field">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="كلمة مرور لإدارة الختمة"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="eye-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? '🙈' : '👁'}
+                </button>
+              </div>
             </div>
 
             <div className="form-group">
@@ -401,12 +414,21 @@ function AdminPage() {
 
             <div className="form-group">
               <label>كلمة مرور المسؤول</label>
-              <input
-                type="password"
-                placeholder="أدخل كلمة مرور المسؤول"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-              />
+              <div className="password-field">
+                <input
+                  type={showLoginPassword ? 'text' : 'password'}
+                  placeholder="أدخل كلمة مرور المسؤول"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="eye-btn"
+                  onClick={() => setShowLoginPassword(!showLoginPassword)}
+                >
+                  {showLoginPassword ? '🙈' : '👁'}
+                </button>
+              </div>
             </div>
 
             <button type="submit" className="btn btn-primary btn-block">

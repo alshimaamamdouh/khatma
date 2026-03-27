@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Khatma = require('../models/Khatma');
 
 async function authMiddleware(req, res, next) {
@@ -6,6 +7,10 @@ async function authMiddleware(req, res, next) {
 
   if (!code) {
     return res.status(401).json({ error: 'رمز الدخول مطلوب' });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(khatmaId)) {
+    return res.status(400).json({ error: 'معرف الختمة غير صحيح' });
   }
 
   try {
@@ -28,6 +33,10 @@ async function adminMiddleware(req, res, next) {
 
   if (!adminPassword) {
     return res.status(401).json({ error: 'كلمة مرور المسؤول مطلوبة' });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(khatmaId)) {
+    return res.status(400).json({ error: 'معرف الختمة غير صحيح' });
   }
 
   try {
