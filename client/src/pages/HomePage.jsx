@@ -23,7 +23,7 @@ function HomePage() {
       localStorage.setItem('khatmaCode', code.trim());
       localStorage.setItem('khatmaId', data.khatma._id);
       localStorage.setItem('khatmaName', data.khatma.name);
-      navigate(`/khatma/${data.khatma._id}/select`);
+      navigate(`/khatma/${data.khatma._id}/dashboard`);
     } catch (err) {
       setError(err.message);
     } finally {
