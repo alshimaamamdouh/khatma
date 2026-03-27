@@ -13,6 +13,10 @@ function AdminPage() {
   const [adminPassword, setAdminPassword] = useState('');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
 
+  // Rotation
+  const [rotationType, setRotationType] = useState('weekly');
+  const [customDays, setCustomDays] = useState('');
+
   // Login form
   const [loginCode, setLoginCode] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -60,7 +64,9 @@ function AdminPage() {
         name,
         accessCode: code,
         adminPassword,
-        startDate
+        startDate,
+        rotationType,
+        customDays: rotationType === 'custom' ? Number(customDays) : null
       });
       setKhatmaId(result.id);
       setAccessCode(code);
@@ -95,6 +101,8 @@ function AdminPage() {
       setDeceasedList(data.deceased);
       setEditKhatmaName(data.khatma.name);
       setEditStartDate(data.khatma.start_date);
+      setRotationType(data.khatma.rotation_type || 'weekly');
+      setCustomDays(data.khatma.custom_days || '');
       setPausedFrom(data.khatma.paused_from || '');
       setPausedTo(data.khatma.paused_to || '');
       localStorage.setItem('khatmaCode', data.khatma.access_code);
@@ -112,9 +120,11 @@ function AdminPage() {
     try {
       await api.updateKhatma(khatmaId, {
         name: editKhatmaName,
-        startDate: editStartDate
+        startDate: editStartDate,
+        rotationType,
+        customDays: rotationType === 'custom' ? Number(customDays) : null
       });
-      setKhatmaData({ ...khatmaData, name: editKhatmaName, start_date: editStartDate });
+      setKhatmaData({ ...khatmaData, name: editKhatmaName, start_date: editStartDate, rotation_type: rotationType, custom_days: customDays });
       setSuccess('تم تحديث بيانات الختمة');
       setShowEditKhatma(false);
     } catch (err) {
@@ -327,6 +337,33 @@ function AdminPage() {
               />
             </div>
 
+            <div className="form-group">
+              <label>مدة التكرار</label>
+              <select
+                value={rotationType}
+                onChange={(e) => setRotationType(e.target.value)}
+              >
+                <option value="daily">يومياً</option>
+                <option value="weekly">أسبوعياً</option>
+                <option value="biweekly">كل أسبوعين</option>
+                <option value="monthly">شهرياً</option>
+                <option value="custom">مدة مخصصة</option>
+              </select>
+            </div>
+
+            {rotationType === 'custom' && (
+              <div className="form-group">
+                <label>عدد الأيام</label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="مثال: 10"
+                  value={customDays}
+                  onChange={(e) => setCustomDays(e.target.value)}
+                />
+              </div>
+            )}
+
             <button type="submit" className="btn btn-primary btn-block">
               إنشاء الختمة
             </button>
@@ -423,6 +460,30 @@ function AdminPage() {
                 onChange={(e) => setEditStartDate(e.target.value)}
               />
             </div>
+            <div className="form-group">
+              <label>مدة التكرار</label>
+              <select
+                value={rotationType}
+                onChange={(e) => setRotationType(e.target.value)}
+              >
+                <option value="daily">يومياً</option>
+                <option value="weekly">أسبوعياً</option>
+                <option value="biweekly">كل أسبوعين</option>
+                <option value="monthly">شهرياً</option>
+                <option value="custom">مدة مخصصة</option>
+              </select>
+            </div>
+            {rotationType === 'custom' && (
+              <div className="form-group">
+                <label>عدد الأيام</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={customDays}
+                  onChange={(e) => setCustomDays(e.target.value)}
+                />
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="submit" className="btn btn-primary">حفظ</button>
               <button type="button" className="btn btn-secondary" onClick={() => setShowEditKhatma(false)}>إلغاء</button>

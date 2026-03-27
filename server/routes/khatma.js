@@ -4,7 +4,7 @@ const Khatma = require('../models/Khatma');
 const Participant = require('../models/Participant');
 const Deceased = require('../models/Deceased');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-const { getWeekNumber, getCurrentJuz, getWeekDedication, isPaused } = require('../utils/rotation');
+const { getCycleNumber, getCurrentJuz, getCycleDedication, isPaused, getRotationLabel } = require('../utils/rotation');
 
 // Access a Khatma by code (participant login)
 router.post('/access', async (req, res) => {
@@ -49,6 +49,8 @@ router.post('/admin-login', async (req, res) => {
         name: khatma.name,
         access_code: khatma.access_code,
         start_date: khatma.start_date,
+        rotation_type: khatma.rotation_type,
+        custom_days: khatma.custom_days,
         paused_from: khatma.paused_from,
         paused_to: khatma.paused_to,
         created_at: khatma.created_at
@@ -63,7 +65,7 @@ router.post('/admin-login', async (req, res) => {
 
 // Create a new Khatma
 router.post('/', async (req, res) => {
-  const { name, accessCode, adminPassword, startDate, participants, deceased } = req.body;
+  const { name, accessCode, adminPassword, startDate, rotationType, customDays, participants, deceased } = req.body;
 
   if (!name || !accessCode || !adminPassword || !startDate) {
     return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
@@ -79,7 +81,9 @@ router.post('/', async (req, res) => {
       name,
       access_code: accessCode,
       admin_password: adminPassword,
-      start_date: startDate
+      start_date: startDate,
+      rotation_type: rotationType || 'weekly',
+      custom_days: rotationType === 'custom' ? (customDays || 7) : null
     });
 
     if (participants && participants.length > 0) {
@@ -111,7 +115,11 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
   try {
     const khatma = req.khatma;
     const paused = isPaused(khatma.paused_from, khatma.paused_to);
-    const weekNumber = getWeekNumber(khatma.start_date, new Date(), khatma.paused_from, khatma.paused_to);
+    const cycleNumber = getCycleNumber(
+      khatma.start_date, new Date(),
+      khatma.paused_from, khatma.paused_to,
+      khatma.rotation_type, khatma.custom_days
+    );
 
     const participants = await Participant.find({ khatma_id: khatma._id }).sort('slot_number');
     const deceasedList = await Deceased.find({ khatma_id: khatma._id }).sort('death_date');
@@ -121,10 +129,11 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
       khatma_id: p.khatma_id,
       name: p.name,
       slot_number: p.slot_number,
-      currentJuz: getCurrentJuz(p.slot_number, weekNumber)
+      currentJuz: getCurrentJuz(p.slot_number, cycleNumber)
     }));
 
-    const dedication = getWeekDedication(deceasedList, weekNumber);
+    const dedication = getCycleDedication(deceasedList, cycleNumber);
+    const rotationLabel = getRotationLabel(khatma.rotation_type, khatma.custom_days);
 
     res.json({
       khatma: {
@@ -132,10 +141,13 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
         name: khatma.name,
         access_code: khatma.access_code,
         start_date: khatma.start_date,
+        rotation_type: khatma.rotation_type,
+        custom_days: khatma.custom_days,
         paused_from: khatma.paused_from,
         paused_to: khatma.paused_to
       },
-      weekNumber: weekNumber + 1,
+      cycleNumber: cycleNumber + 1,
+      rotationLabel,
       paused,
       participants: participantsWithJuz,
       dedication,
@@ -148,11 +160,15 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
 
 // Update Khatma (admin only)
 router.put('/:id', adminMiddleware, async (req, res) => {
-  const { name, startDate, pausedFrom, pausedTo } = req.body;
+  const { name, startDate, rotationType, customDays, pausedFrom, pausedTo } = req.body;
   const update = {};
 
   if (name) update.name = name;
   if (startDate) update.start_date = startDate;
+  if (rotationType) {
+    update.rotation_type = rotationType;
+    update.custom_days = rotationType === 'custom' ? (customDays || 7) : null;
+  }
   if (pausedFrom !== undefined) update.paused_from = pausedFrom || null;
   if (pausedTo !== undefined) update.paused_to = pausedTo || null;
 

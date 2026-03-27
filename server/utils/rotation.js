@@ -1,8 +1,22 @@
 /**
- * Calculate the number of paused weeks that overlap with the period
+ * Get the number of days per rotation cycle based on rotation type.
+ */
+function getCycleDays(rotationType, customDays) {
+  switch (rotationType) {
+    case 'daily': return 1;
+    case 'weekly': return 7;
+    case 'biweekly': return 14;
+    case 'monthly': return 30;
+    case 'custom': return customDays || 7;
+    default: return 7;
+  }
+}
+
+/**
+ * Calculate the number of paused cycles that overlap with the period
  * from startDate to currentDate.
  */
-function getPausedWeeks(startDate, currentDate, pausedFrom, pausedTo) {
+function getPausedCycles(startDate, currentDate, pausedFrom, pausedTo, cycleDays) {
   if (!pausedFrom || !pausedTo) return 0;
 
   const start = new Date(startDate);
@@ -14,14 +28,13 @@ function getPausedWeeks(startDate, currentDate, pausedFrom, pausedTo) {
   const pTo = new Date(pausedTo);
   pTo.setHours(0, 0, 0, 0);
 
-  // Clamp pause period to within start..now
   const effectiveStart = pFrom < start ? start : pFrom;
   const effectiveEnd = pTo > now ? now : pTo;
 
   if (effectiveEnd <= effectiveStart) return 0;
 
   const pausedDays = Math.floor((effectiveEnd - effectiveStart) / (1000 * 60 * 60 * 24));
-  return Math.floor(pausedDays / 7);
+  return Math.floor(pausedDays / cycleDays);
 }
 
 /**
@@ -41,46 +54,41 @@ function isPaused(pausedFrom, pausedTo, currentDate = new Date()) {
 }
 
 /**
- * Calculate the current week number (0-indexed) from the start date,
- * excluding paused weeks.
+ * Calculate the current cycle number (0-indexed) from the start date,
+ * excluding paused cycles.
  */
-function getWeekNumber(startDate, currentDate = new Date(), pausedFrom = null, pausedTo = null) {
+function getCycleNumber(startDate, currentDate = new Date(), pausedFrom = null, pausedTo = null, rotationType = 'weekly', customDays = null) {
+  const cycleDays = getCycleDays(rotationType, customDays);
   const start = new Date(startDate);
   start.setHours(0, 0, 0, 0);
   const now = new Date(currentDate);
   now.setHours(0, 0, 0, 0);
   const diffMs = now - start;
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const totalWeeks = Math.max(0, Math.floor(diffDays / 7));
+  const totalCycles = Math.max(0, Math.floor(diffDays / cycleDays));
 
-  const pausedWeeks = getPausedWeeks(startDate, currentDate, pausedFrom, pausedTo);
+  const pausedCycles = getPausedCycles(startDate, currentDate, pausedFrom, pausedTo, cycleDays);
 
-  return Math.max(0, totalWeeks - pausedWeeks);
+  return Math.max(0, totalCycles - pausedCycles);
 }
 
 /**
  * Calculate the current Juz' for a participant based on their initial slot.
- * slotNumber: 1-30 (initial assignment)
- * weekNumber: 0-indexed week count
- * Returns: 1-30
  */
-function getCurrentJuz(slotNumber, weekNumber) {
-  return ((slotNumber - 1 + weekNumber) % 30) + 1;
+function getCurrentJuz(slotNumber, cycleNumber) {
+  return ((slotNumber - 1 + cycleNumber) % 30) + 1;
 }
 
 /**
- * Determine which deceased person this week's Khatma is dedicated to.
- * Uses round-robin based on week number, with anniversary highlighting.
+ * Determine which deceased person this cycle's Khatma is dedicated to.
  */
-function getWeekDedication(deceasedList, weekNumber, currentDate = new Date()) {
+function getCycleDedication(deceasedList, cycleNumber, currentDate = new Date()) {
   if (!deceasedList || deceasedList.length === 0) return null;
 
-  // Sort by death_date ascending
   const sorted = [...deceasedList].sort(
     (a, b) => new Date(a.death_date) - new Date(b.death_date)
   );
 
-  // Check for anniversary this week (same month and day)
   const now = new Date(currentDate);
   const currentMonth = now.getMonth();
   const currentDay = now.getDate();
@@ -92,7 +100,6 @@ function getWeekDedication(deceasedList, weekNumber, currentDate = new Date()) {
       anniversaryPerson = person;
       break;
     }
-    // Check within the same week (±3 days)
     const dayDiff = Math.abs(
       (currentMonth * 31 + currentDay) - (deathDate.getMonth() * 31 + deathDate.getDate())
     );
@@ -101,8 +108,7 @@ function getWeekDedication(deceasedList, weekNumber, currentDate = new Date()) {
     }
   }
 
-  // Round-robin dedication
-  const dedicatedIndex = weekNumber % sorted.length;
+  const dedicatedIndex = cycleNumber % sorted.length;
   const dedicated = sorted[dedicatedIndex];
 
   return {
@@ -112,4 +118,18 @@ function getWeekDedication(deceasedList, weekNumber, currentDate = new Date()) {
   };
 }
 
-module.exports = { getWeekNumber, getCurrentJuz, getWeekDedication, isPaused };
+/**
+ * Get Arabic label for rotation type.
+ */
+function getRotationLabel(rotationType, customDays) {
+  switch (rotationType) {
+    case 'daily': return 'يومياً';
+    case 'weekly': return 'أسبوعياً';
+    case 'biweekly': return 'كل أسبوعين';
+    case 'monthly': return 'شهرياً';
+    case 'custom': return `كل ${customDays} يوم`;
+    default: return 'أسبوعياً';
+  }
+}
+
+module.exports = { getCycleNumber, getCurrentJuz, getCycleDedication, isPaused, getRotationLabel, getCycleDays };

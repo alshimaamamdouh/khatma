@@ -5,6 +5,8 @@ const khatmaSchema = new mongoose.Schema({
   access_code: { type: String, required: true, unique: true },
   admin_password: { type: String, required: true },
   start_date: { type: String, required: true },
+  rotation_type: { type: String, default: 'weekly', enum: ['daily', 'weekly', 'biweekly', 'monthly', 'custom'] },
+  custom_days: { type: Number, default: null },
   paused_from: { type: String, default: null },
   paused_to: { type: String, default: null },
   created_at: { type: Date, default: Date.now }
