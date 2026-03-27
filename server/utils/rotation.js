@@ -80,9 +80,10 @@ function getCurrentJuz(slotNumber, cycleNumber) {
 }
 
 /**
- * Determine which deceased person this cycle's Khatma is dedicated to.
+ * Determine which deceased people this cycle's Khatma is dedicated to.
+ * Returns multiple people if more than one anniversary falls in the same period.
  */
-function getCycleDedication(deceasedList, cycleNumber, currentDate = new Date()) {
+function getCycleDedication(deceasedList, cycleNumber, currentDate = new Date(), cycleDays = 7) {
   if (!deceasedList || deceasedList.length === 0) return null;
 
   const sorted = [...deceasedList].sort(
@@ -93,28 +94,34 @@ function getCycleDedication(deceasedList, cycleNumber, currentDate = new Date())
   const currentMonth = now.getMonth();
   const currentDay = now.getDate();
 
-  let anniversaryPerson = null;
+  // Find all anniversary people within this cycle window
+  const anniversaryPeople = [];
   for (const person of sorted) {
     const deathDate = new Date(person.death_date);
-    if (deathDate.getMonth() === currentMonth && deathDate.getDate() === currentDay) {
-      anniversaryPerson = person;
-      break;
-    }
     const dayDiff = Math.abs(
       (currentMonth * 31 + currentDay) - (deathDate.getMonth() * 31 + deathDate.getDate())
     );
-    if (dayDiff <= 3) {
-      anniversaryPerson = person;
+    if (dayDiff <= Math.ceil(cycleDays / 2)) {
+      anniversaryPeople.push(person);
     }
   }
 
+  // Round-robin dedication
   const dedicatedIndex = cycleNumber % sorted.length;
   const dedicated = sorted[dedicatedIndex];
 
+  // Combine: always include the round-robin person + any anniversary people
+  const allDedicated = [dedicated];
+  for (const ap of anniversaryPeople) {
+    if (ap._id?.toString() !== dedicated._id?.toString()) {
+      allDedicated.push(ap);
+    }
+  }
+
   return {
-    dedicated,
-    isAnniversary: anniversaryPerson ? anniversaryPerson._id?.toString() === dedicated._id?.toString() : false,
-    anniversaryPerson
+    dedicated: allDedicated,
+    hasAnniversary: anniversaryPeople.length > 0,
+    anniversaryPeople
   };
 }
 

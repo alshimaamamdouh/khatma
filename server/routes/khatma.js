@@ -4,7 +4,7 @@ const Khatma = require('../models/Khatma');
 const Participant = require('../models/Participant');
 const Deceased = require('../models/Deceased');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-const { getCycleNumber, getCurrentJuz, getCycleDedication, isPaused, getRotationLabel } = require('../utils/rotation');
+const { getCycleNumber, getCurrentJuz, getCycleDedication, isPaused, getRotationLabel, getCycleDays } = require('../utils/rotation');
 
 // Access a Khatma by code (participant login)
 router.post('/access', async (req, res) => {
@@ -132,7 +132,8 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
       currentJuz: getCurrentJuz(p.slot_number, cycleNumber)
     }));
 
-    const dedication = getCycleDedication(deceasedList, cycleNumber);
+    const cycleDays = getCycleDays(khatma.rotation_type, khatma.custom_days);
+    const dedication = getCycleDedication(deceasedList, cycleNumber, new Date(), cycleDays);
     const rotationLabel = getRotationLabel(khatma.rotation_type, khatma.custom_days);
 
     res.json({

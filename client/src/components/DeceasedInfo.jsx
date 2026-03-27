@@ -1,32 +1,42 @@
 function DeceasedInfo({ dedication }) {
-  if (!dedication || !dedication.dedicated) {
+  if (!dedication || !dedication.dedicated || dedication.dedicated.length === 0) {
     return (
       <div className="dedication-box">
-        <div className="label">ختمة هذا الأسبوع</div>
+        <div className="label">ختمة هذه الدورة</div>
         <div className="deceased-name">لم يتم تحديد إهداء</div>
       </div>
     );
   }
 
-  const { dedicated, isAnniversary, anniversaryPerson } = dedication;
-  const deathDate = new Date(dedicated.death_date).toLocaleDateString('ar-EG', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  const { dedicated, hasAnniversary, anniversaryPeople } = dedication;
 
   return (
-    <div className={`dedication-box ${isAnniversary ? 'anniversary' : ''}`}>
+    <div className={`dedication-box ${hasAnniversary ? 'anniversary' : ''}`}>
       <div className="label">
-        {isAnniversary ? 'ذكرى وفاة - ختمة هذا الأسبوع مهداة لروح' : 'ختمة هذا الأسبوع مهداة لروح'}
+        {hasAnniversary ? 'ذكرى وفاة — ' : ''}ختمة هذه الدورة مهداة لروح
       </div>
-      <div className="deceased-name">{dedicated.name}</div>
-      <div className="death-date">تاريخ الوفاة: {deathDate}</div>
-      {anniversaryPerson && !isAnniversary && (
-        <div style={{ marginTop: 8, fontSize: '0.85rem', color: '#c62828' }}>
-          ذكرى وفاة: {anniversaryPerson.name}
-        </div>
-      )}
+
+      {dedicated.map((person, i) => {
+        const deathDate = new Date(person.death_date).toLocaleDateString('ar-EG', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        const isAnniversary = anniversaryPeople?.some(
+          ap => ap._id === person._id
+        );
+
+        return (
+          <div key={person._id || i} className="deceased-entry">
+            <div className="deceased-name">
+              {person.name}
+              {isAnniversary && <span className="anniversary-tag"> (ذكرى وفاة)</span>}
+            </div>
+            <div className="death-date">تاريخ الوفاة: {deathDate}</div>
+            {i < dedicated.length - 1 && <div className="deceased-separator">و</div>}
+          </div>
+        );
+      })}
     </div>
   );
 }

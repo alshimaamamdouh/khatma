@@ -279,6 +279,26 @@ body {
   margin-top: 4px;
 }
 
+.deceased-entry {
+  margin-bottom: 8px;
+}
+
+.deceased-entry:last-child {
+  margin-bottom: 0;
+}
+
+.deceased-separator {
+  font-size: 1.1rem;
+  color: var(--text-light);
+  margin: 4px 0;
+}
+
+.anniversary-tag {
+  font-size: 0.8rem;
+  color: #c62828;
+  font-weight: 400;
+}
+
 .dedication-box.anniversary {
   border-color: #c62828;
   background: linear-gradient(135deg, #ffebee, #fce4ec);
