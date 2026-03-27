@@ -138,14 +138,18 @@ function Dashboard() {
 
               return (
                 <div key={juzNum} className={`juz-card ${isMyJuz ? 'highlighted' : ''} ${completed ? 'completed' : ''}`}>
-                  <div className="juz-number">
-                    <a href={`https://quran.com/juz/${juzNum}`} target="_blank" rel="noopener noreferrer">
-                      {juzNum}
-                    </a>
-                  </div>
+                  <div className="juz-number">{juzNum}</div>
                   <div className="participant-name">
                     {participant ? participant.name : 'شاغر'}
                   </div>
+                  <a
+                    href={`https://quran.com/juz/${juzNum}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="read-juz-btn"
+                  >
+                    اقرأ الجزء
+                  </a>
                   {participant && completed && (
                     <div className="completion-badge">تم</div>
                   )}

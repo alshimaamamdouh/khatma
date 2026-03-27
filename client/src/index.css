@@ -668,14 +668,24 @@ body {
   margin-bottom: 20px;
 }
 
-/* Juz Link */
-.juz-card .juz-number a {
-  color: var(--primary);
+/* Read Juz Button */
+.read-juz-btn {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 10px;
+  background: var(--primary);
+  color: white;
+  border-radius: 6px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 600;
   text-decoration: none;
+  transition: all 0.2s;
 }
 
-.juz-card .juz-number a:hover {
-  text-decoration: underline;
+.read-juz-btn:hover {
+  background: var(--primary-light);
+  transform: translateY(-1px);
 }
 
 /* Dark mode overrides for special backgrounds */
@@ -768,8 +778,7 @@ body {
     background: #e8f5e9 !important;
   }
 
-  .juz-card .juz-number a {
-    color: black;
-    text-decoration: none;
+  .read-juz-btn {
+    display: none !important;
   }
 }
