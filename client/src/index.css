@@ -448,6 +448,95 @@ body {
   margin: 16px 0;
 }
 
+/* Completion */
+.completion-progress {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  background: var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+  border-radius: 5px;
+  transition: width 0.5s ease;
+}
+
+.progress-text {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.khatma-complete-banner {
+  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.khatma-complete-banner .complete-sub {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-light);
+  margin-top: 8px;
+}
+
+.juz-card.completed {
+  background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+  border-color: var(--primary);
+}
+
+.completion-badge {
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.btn-complete {
+  margin-top: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  border-radius: 6px;
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-complete:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-undo-complete {
+  margin-top: 4px;
+  padding: 2px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-light);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 0.65rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 /* Password Field */
 .password-field {
   position: relative;

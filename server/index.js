@@ -6,6 +6,7 @@ const { connectDB } = require('./db/init');
 const khatmaRoutes = require('./routes/khatma');
 const participantRoutes = require('./routes/participants');
 const deceasedRoutes = require('./routes/deceased');
+const completionRoutes = require('./routes/completions');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use(async (req, res, next) => {
 app.use('/api/khatma', khatmaRoutes);
 app.use('/api/khatma/:id/participants', participantRoutes);
 app.use('/api/khatma/:id/deceased', deceasedRoutes);
+app.use('/api/khatma/:id/completions', completionRoutes);
 
 // Health check
 app.get('/api', (req, res) => {

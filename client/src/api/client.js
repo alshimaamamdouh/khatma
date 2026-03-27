@@ -85,5 +85,18 @@ export const api = {
 
   deleteDeceased: (khatmaId, did) => request(`/khatma/${khatmaId}/deceased/${did}`, {
     method: 'DELETE'
+  }),
+
+  // Completions
+  getCompletions: (khatmaId, cycleNumber) => request(`/khatma/${khatmaId}/completions/${cycleNumber}`),
+
+  markComplete: (khatmaId, data) => request(`/khatma/${khatmaId}/completions`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+
+  undoComplete: (khatmaId, data) => request(`/khatma/${khatmaId}/completions`, {
+    method: 'DELETE',
+    body: JSON.stringify(data)
   })
 };
