@@ -3,6 +3,7 @@ const router = express.Router();
 const Khatma = require('../models/Khatma');
 const Participant = require('../models/Participant');
 const Deceased = require('../models/Deceased');
+const Completion = require('../models/Completion');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { getCycleNumber, getCurrentJuz, getCycleDedication, isPaused, getRotationLabel, getCycleDays } = require('../utils/rotation');
 
@@ -189,6 +190,164 @@ router.put('/:id', adminMiddleware, async (req, res) => {
   try {
     await Khatma.findByIdAndUpdate(req.khatma._id, update);
     res.json({ message: 'تم التحديث بنجاح' });
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
+  }
+});
+
+// Get khatma history (past cycles)
+router.get('/:id/history', authMiddleware, async (req, res) => {
+  try {
+    const khatma = req.khatma;
+    const cycleNumber = getCycleNumber(
+      khatma.start_date, new Date(),
+      khatma.paused_from, khatma.paused_to,
+      khatma.rotation_type, khatma.custom_days
+    );
+    const currentCycle = cycleNumber + 1;
+
+    const participants = await Participant.find({ khatma_id: khatma._id }).sort('slot_number');
+    const completions = await Completion.find({ khatma_id: khatma._id });
+    const deceasedList = await Deceased.find({ khatma_id: khatma._id }).sort('death_date');
+    const cycleDays = getCycleDays(khatma.rotation_type, khatma.custom_days);
+
+    const history = [];
+    for (let c = 1; c <= currentCycle; c++) {
+      const cycleCompletions = completions.filter(comp => comp.cycle_number === c);
+      const completedIds = cycleCompletions.map(comp => comp.participant_id.toString());
+
+      const participantsInfo = participants.map(p => ({
+        name: p.name,
+        slot_number: p.slot_number,
+        juz: getCurrentJuz(p.slot_number, c - 1),
+        completed: completedIds.includes(p._id.toString())
+      }));
+
+      const dedication = getCycleDedication(deceasedList, c - 1, new Date(), cycleDays);
+
+      history.push({
+        cycle: c,
+        khatmaNumber: (khatma.khatma_number || 1) + c - 1,
+        completedCount: cycleCompletions.length,
+        totalParticipants: participants.length,
+        allCompleted: cycleCompletions.length >= participants.length && participants.length > 0,
+        participants: participantsInfo,
+        dedication: dedication?.dedicated?.map(d => d.name) || []
+      });
+    }
+
+    res.json({ history: history.reverse() });
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
+  }
+});
+
+// Get statistics
+router.get('/:id/stats', authMiddleware, async (req, res) => {
+  try {
+    const khatma = req.khatma;
+    const cycleNumber = getCycleNumber(
+      khatma.start_date, new Date(),
+      khatma.paused_from, khatma.paused_to,
+      khatma.rotation_type, khatma.custom_days
+    );
+    const currentCycle = cycleNumber + 1;
+
+    const participants = await Participant.find({ khatma_id: khatma._id }).sort('slot_number');
+    const completions = await Completion.find({ khatma_id: khatma._id });
+
+    const participantStats = participants.map(p => {
+      const pCompletions = completions.filter(c => c.participant_id.toString() === p._id.toString());
+      return {
+        name: p.name,
+        slot_number: p.slot_number,
+        completedCycles: pCompletions.length,
+        totalCycles: currentCycle,
+        rate: currentCycle > 0 ? Math.round((pCompletions.length / currentCycle) * 100) : 0
+      };
+    });
+
+    // Count fully completed khatmas
+    let completedKhatmas = 0;
+    for (let c = 1; c <= currentCycle; c++) {
+      const cycleCompletions = completions.filter(comp => comp.cycle_number === c);
+      if (cycleCompletions.length >= participants.length && participants.length > 0) {
+        completedKhatmas++;
+      }
+    }
+
+    // Current streak
+    let streak = 0;
+    for (let c = currentCycle; c >= 1; c--) {
+      const cycleCompletions = completions.filter(comp => comp.cycle_number === c);
+      if (cycleCompletions.length >= participants.length && participants.length > 0) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    res.json({
+      participantStats,
+      completedKhatmas,
+      totalCycles: currentCycle,
+      totalParticipants: participants.length,
+      streak
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
+  }
+});
+
+// Duplicate Khatma (admin only)
+router.post('/:id/duplicate', adminMiddleware, async (req, res) => {
+  const { newAccessCode, newAdminPassword } = req.body;
+
+  if (!newAccessCode || !newAdminPassword) {
+    return res.status(400).json({ error: 'رمز الدخول وكلمة المرور مطلوبان' });
+  }
+
+  try {
+    const existing = await Khatma.findOne({ access_code: newAccessCode });
+    if (existing) {
+      return res.status(409).json({ error: 'رمز الدخول مستخدم بالفعل' });
+    }
+
+    const khatma = req.khatma;
+    const newKhatma = await Khatma.create({
+      name: khatma.name + ' (نسخة)',
+      access_code: newAccessCode,
+      admin_password: newAdminPassword,
+      start_date: new Date().toISOString().split('T')[0],
+      rotation_type: khatma.rotation_type,
+      custom_days: khatma.custom_days,
+      use_hijri: khatma.use_hijri,
+      khatma_number: khatma.khatma_number
+    });
+
+    const participants = await Participant.find({ khatma_id: khatma._id });
+    if (participants.length > 0) {
+      await Participant.insertMany(participants.map(p => ({
+        khatma_id: newKhatma._id,
+        name: p.name,
+        slot_number: p.slot_number
+      })));
+    }
+
+    const deceased = await Deceased.find({ khatma_id: khatma._id });
+    if (deceased.length > 0) {
+      await Deceased.insertMany(deceased.map(d => ({
+        khatma_id: newKhatma._id,
+        name: d.name,
+        death_date: d.death_date
+      })));
+    }
+
+    res.status(201).json({
+      id: newKhatma._id,
+      accessCode: newAccessCode,
+      message: 'تم نسخ الختمة بنجاح'
+    });
   } catch (err) {
     res.status(500).json({ error: 'حدث خطأ' });
   }

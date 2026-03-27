@@ -98,5 +98,21 @@ export const api = {
   undoComplete: (khatmaId, data) => request(`/khatma/${khatmaId}/completions`, {
     method: 'DELETE',
     body: JSON.stringify(data)
+  }),
+
+  // History & Stats
+  getHistory: (khatmaId) => request(`/khatma/${khatmaId}/history`),
+  getStats: (khatmaId) => request(`/khatma/${khatmaId}/stats`),
+
+  // Duplicate
+  duplicateKhatma: (khatmaId, data) => request(`/khatma/${khatmaId}/duplicate`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+
+  // Swap participants
+  swapParticipants: (khatmaId, pid, targetPid) => request(`/khatma/${khatmaId}/participants/${pid}/swap`, {
+    method: 'PUT',
+    body: JSON.stringify({ targetPid })
   })
 };

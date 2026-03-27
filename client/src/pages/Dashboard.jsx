@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { getJuzName } from '../utils/juzNames';
 import KhatmaGrid from '../components/KhatmaGrid';
 import DeceasedInfo from '../components/DeceasedInfo';
+import DuaKhatm from '../components/DuaKhatm';
 
 function Dashboard() {
   const { id } = useParams();
@@ -12,6 +13,7 @@ function Dashboard() {
   const [completions, setCompletions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const participantId = localStorage.getItem('participantId');
   const participantName = localStorage.getItem('participantName');
@@ -28,6 +30,18 @@ function Dashboard() {
     const khatmaName = data?.khatma?.name || '';
     const appUrl = window.location.origin;
     const text = `ختمة: ${khatmaName}\nرمز الدخول: ${khatmaCode}\nرابط التطبيق: ${appUrl}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleWhatsAppReminder = () => {
+    if (!data || !completions) return;
+    const incomplete = data.participants.filter(p => !completions.completedIds?.includes(p._id));
+    if (incomplete.length === 0) return;
+
+    const khatmaName = data.khatma.name || '';
+    const lines = incomplete.map(p => `- ${p.name} (جزء ${p.currentJuz})`);
+    const text = `تذكير - ${khatmaName}\n\nالأعضاء الذين لم ينهوا أجزاءهم بعد:\n${lines.join('\n')}\n\nجزاكم الله خيراً`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
@@ -50,13 +64,21 @@ function Dashboard() {
     fetchData();
   }, [id]);
 
+  // Celebration effect when all completed
+  useEffect(() => {
+    if (completions?.allCompleted) {
+      setShowCelebration(true);
+      const timer = setTimeout(() => setShowCelebration(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [completions?.allCompleted]);
+
   const handleMarkComplete = async (pId) => {
     try {
       const result = await api.markComplete(id, {
         participantId: pId,
         cycleNumber: data.cycleNumber
       });
-      // Refresh completions
       const compData = await api.getCompletions(id, data.cycleNumber);
       setCompletions(compData);
     } catch (err) {
@@ -77,6 +99,27 @@ function Dashboard() {
     }
   };
 
+  const handleExport = () => {
+    if (!data) return;
+    const rows = [['الترتيب', 'الاسم', 'الجزء الحالي', 'الحالة']];
+    data.participants
+      .sort((a, b) => a.slot_number - b.slot_number)
+      .forEach(p => {
+        const completed = completions?.completedIds?.includes(p._id) ? 'انتهى' : 'لم ينته';
+        rows.push([p.slot_number, p.name, p.currentJuz, completed]);
+      });
+
+    const bom = '\uFEFF';
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${data.khatma.name}_الختمة_${data.currentKhatmaNumber}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) return <div className="loading">جاري التحميل...</div>;
   if (error) return <div className="error-msg">{error}</div>;
   if (!data) return null;
@@ -86,9 +129,12 @@ function Dashboard() {
     : null;
 
   const isCompleted = (pId) => completions?.completedIds?.includes(pId);
+  const incompleteCount = data.participants.filter(p => !isCompleted(p._id)).length;
 
   return (
     <div>
+      {showCelebration && <div className="celebration-overlay" />}
+
       <div className="card">
         <h2 className="card-title">{data.khatma.name}</h2>
         <div className="week-info">
@@ -110,10 +156,13 @@ function Dashboard() {
       </div>
 
       {completions?.allCompleted && (
-        <div className="khatma-complete-banner">
-          تمت الختمة بحمد الله
-          <div className="complete-sub">أنهى جميع المشاركين أجزاءهم لهذه الدورة</div>
-        </div>
+        <>
+          <div className={`khatma-complete-banner ${showCelebration ? 'celebrating' : ''}`}>
+            تمت الختمة بحمد الله
+            <div className="complete-sub">أنهى جميع المشاركين أجزاءهم لهذه الدورة</div>
+          </div>
+          <DuaKhatm />
+        </>
       )}
 
       {data.paused && (
@@ -176,12 +225,30 @@ function Dashboard() {
         </div>
       )}
 
+      {/* Navigation Links */}
+      <div className="dashboard-nav no-print">
+        <button className="btn btn-secondary" onClick={() => navigate(`/khatma/${id}/history`)}>
+          السجل
+        </button>
+        <button className="btn btn-secondary" onClick={() => navigate(`/khatma/${id}/stats`)}>
+          الإحصائيات
+        </button>
+      </div>
+
       <div className="dashboard-actions no-print">
+        {incompleteCount > 0 && !data.paused && (
+          <button className="btn btn-primary" onClick={handleWhatsAppReminder}>
+            تذكير ({incompleteCount})
+          </button>
+        )}
+        <button className="btn btn-secondary" onClick={handleExport}>
+          تصدير CSV
+        </button>
         <button className="btn btn-secondary" onClick={() => window.print()}>
           طباعة
         </button>
         <button className="btn btn-primary" onClick={handleWhatsAppShare}>
-          مشاركة عبر واتساب
+          مشاركة واتساب
         </button>
         <button className="btn btn-secondary" onClick={handleLogout}>
           تسجيل الخروج

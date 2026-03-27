@@ -63,6 +63,11 @@ function AdminPage() {
   const [bulkAddMode, setBulkAddMode] = useState(false);
   const [bulkNames, setBulkNames] = useState('');
 
+  // Duplicate
+  const [showDuplicate, setShowDuplicate] = useState(false);
+  const [dupCode, setDupCode] = useState('');
+  const [dupPassword, setDupPassword] = useState('');
+
   const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
@@ -323,6 +328,47 @@ function AdminPage() {
       setParticipants([...participants, ...newParticipants]);
       setBulkNames('');
       setSuccess(`تمت إضافة ${newParticipants.length} مشارك بنجاح`);
+    }
+  };
+
+  const handleDuplicate = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!dupCode || !dupPassword) {
+      setError('رمز الدخول وكلمة المرور مطلوبان للنسخة الجديدة');
+      return;
+    }
+    try {
+      const result = await api.duplicateKhatma(khatmaId, {
+        newAccessCode: dupCode,
+        newAdminPassword: dupPassword
+      });
+      setSuccess(`تم نسخ الختمة بنجاح! رمز الدخول الجديد: ${result.accessCode}`);
+      setShowDuplicate(false);
+      setDupCode('');
+      setDupPassword('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleSwap = async (pid, direction) => {
+    setError('');
+    const sorted = [...participants].sort((a, b) => a.slot_number - b.slot_number);
+    const idx = sorted.findIndex(p => p._id === pid);
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= sorted.length) return;
+
+    const targetPid = sorted[targetIdx]._id;
+    try {
+      await api.swapParticipants(khatmaId, pid, targetPid);
+      setParticipants(participants.map(p => {
+        if (p._id === pid) return { ...p, slot_number: sorted[targetIdx].slot_number };
+        if (p._id === targetPid) return { ...p, slot_number: sorted[idx].slot_number };
+        return p;
+      }));
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -746,7 +792,9 @@ function AdminPage() {
                   ) : (
                     <>
                       <span>#{p.slot_number} - {p.name}</span>
-                      <div style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn-reorder" onClick={() => handleSwap(p._id, 'up')} title="تقديم">&#9650;</button>
+                        <button className="btn-reorder" onClick={() => handleSwap(p._id, 'down')} title="تأخير">&#9660;</button>
                         <button
                           className="btn btn-secondary btn-sm"
                           onClick={() => { setEditingParticipant(p._id); setEditParticipantName(p.name); }}
@@ -838,6 +886,44 @@ function AdminPage() {
               </li>
             ))}
           </ul>
+        )}
+      </div>
+
+      {/* Duplicate Khatma */}
+      <div className="card admin-section">
+        <h3>نسخ الختمة</h3>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-light)', marginBottom: 12 }}>
+          إنشاء نسخة جديدة من الختمة بنفس المشاركين والمتوفين مع رمز دخول جديد
+        </p>
+        {!showDuplicate ? (
+          <button className="btn btn-secondary btn-block" onClick={() => setShowDuplicate(true)}>
+            نسخ الختمة
+          </button>
+        ) : (
+          <form onSubmit={handleDuplicate}>
+            <div className="form-group">
+              <label>رمز الدخول للنسخة الجديدة</label>
+              <input
+                type="text"
+                placeholder="رمز جديد"
+                value={dupCode}
+                onChange={(e) => setDupCode(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label>كلمة مرور المسؤول للنسخة الجديدة</label>
+              <input
+                type="text"
+                placeholder="كلمة مرور جديدة"
+                value={dupPassword}
+                onChange={(e) => setDupPassword(e.target.value)}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="submit" className="btn btn-primary">نسخ</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowDuplicate(false)}>إلغاء</button>
+            </div>
+          </form>
         )}
       </div>
     </div>

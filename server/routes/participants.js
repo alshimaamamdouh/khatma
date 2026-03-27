@@ -63,6 +63,33 @@ router.put('/:pid', adminMiddleware, async (req, res) => {
   }
 });
 
+// Swap participant slot numbers (admin only)
+router.put('/:pid/swap', adminMiddleware, async (req, res) => {
+  const { targetPid } = req.body;
+
+  if (!targetPid) {
+    return res.status(400).json({ error: 'المشارك الهدف مطلوب' });
+  }
+
+  try {
+    const p1 = await Participant.findOne({ _id: req.params.pid, khatma_id: req.khatma._id });
+    const p2 = await Participant.findOne({ _id: targetPid, khatma_id: req.khatma._id });
+
+    if (!p1 || !p2) {
+      return res.status(404).json({ error: 'المشارك غير موجود' });
+    }
+
+    const tempSlot = 999;
+    await Participant.findByIdAndUpdate(p1._id, { slot_number: tempSlot });
+    await Participant.findByIdAndUpdate(p2._id, { slot_number: p1.slot_number });
+    await Participant.findByIdAndUpdate(p1._id, { slot_number: p2.slot_number });
+
+    res.json({ message: 'تم تبديل الترتيب بنجاح' });
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
+  }
+});
+
 // Delete participant (admin only)
 router.delete('/:pid', adminMiddleware, async (req, res) => {
   try {
