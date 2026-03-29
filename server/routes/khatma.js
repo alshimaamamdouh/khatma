@@ -55,6 +55,7 @@ router.post('/admin-login', async (req, res) => {
         paused_from: khatma.paused_from,
         paused_to: khatma.paused_to,
         use_hijri: khatma.use_hijri,
+        is_quick: khatma.is_quick,
         khatma_number: khatma.khatma_number,
         created_at: khatma.created_at
       },
@@ -68,7 +69,7 @@ router.post('/admin-login', async (req, res) => {
 
 // Create a new Khatma
 router.post('/', async (req, res) => {
-  const { name, accessCode, adminPassword, startDate, rotationType, customDays, useHijri, khatmaNumber, participants, deceased } = req.body;
+  const { name, accessCode, adminPassword, startDate, rotationType, customDays, useHijri, khatmaNumber, isQuick, participants, deceased } = req.body;
 
   if (!name || !accessCode || !adminPassword || !startDate) {
     return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
@@ -88,6 +89,7 @@ router.post('/', async (req, res) => {
       rotation_type: rotationType || 'weekly',
       custom_days: rotationType === 'custom' ? (customDays || 7) : null,
       use_hijri: useHijri || false,
+      is_quick: isQuick || false,
       khatma_number: khatmaNumber || 1
     });
 
@@ -112,6 +114,39 @@ router.post('/', async (req, res) => {
     res.status(201).json({ id: khatma._id, message: 'تم إنشاء الختمة بنجاح' });
   } catch (err) {
     res.status(500).json({ error: 'حدث خطأ أثناء إنشاء الختمة' });
+  }
+});
+
+// Self-join a quick khatma (no admin needed)
+router.post('/:id/join', authMiddleware, async (req, res) => {
+  const { name, slotNumber } = req.body;
+
+  if (!name || !slotNumber) {
+    return res.status(400).json({ error: 'الاسم ورقم الجزء مطلوبان' });
+  }
+
+  if (slotNumber < 1 || slotNumber > 30) {
+    return res.status(400).json({ error: 'رقم الجزء يجب أن يكون بين 1 و 30' });
+  }
+
+  try {
+    const khatma = req.khatma;
+    if (!khatma.is_quick) {
+      return res.status(403).json({ error: 'هذه الختمة ليست ختمة سريعة' });
+    }
+
+    const participant = await Participant.create({
+      khatma_id: khatma._id,
+      name,
+      slot_number: slotNumber
+    });
+
+    res.status(201).json({ message: 'تم التسجيل بنجاح', participant });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ error: 'هذا الجزء مشغول بالفعل' });
+    }
+    res.status(500).json({ error: 'حدث خطأ' });
   }
 });
 
@@ -152,6 +187,7 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
         paused_from: khatma.paused_from,
         paused_to: khatma.paused_to,
         use_hijri: khatma.use_hijri,
+        is_quick: khatma.is_quick,
         khatma_number: khatma.khatma_number
       },
       cycleNumber: cycleNumber + 1,

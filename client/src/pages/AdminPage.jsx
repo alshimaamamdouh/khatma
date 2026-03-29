@@ -14,6 +14,9 @@ function AdminPage() {
           <button className="btn btn-secondary btn-block" onClick={() => navigate('/admin/manage')}>
             إدارة ختمة موجودة
           </button>
+          <button className="btn btn-secondary btn-block" onClick={() => navigate('/')}>
+            العودة للرئيسية
+          </button>
         </div>
       </div>
     </div>

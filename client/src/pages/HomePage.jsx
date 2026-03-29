@@ -64,8 +64,11 @@ function HomePage() {
         </form>
 
         <div className="home-links">
-          <Link to="/admin" className="btn btn-secondary btn-sm">
+          <Link to="/admin/create" className="btn btn-primary btn-sm">
             إنشاء ختمة جديدة
+          </Link>
+          <Link to="/admin/manage" className="btn btn-secondary btn-sm">
+            إدارة ختمة موجودة
           </Link>
         </div>
       </div>

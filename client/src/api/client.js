@@ -44,6 +44,11 @@ export const api = {
 
   getDashboard: (id) => request(`/khatma/${id}/dashboard`),
 
+  joinQuickKhatma: (id, data) => request(`/khatma/${id}/join`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+
   updateKhatma: (id, data) => request(`/khatma/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data)

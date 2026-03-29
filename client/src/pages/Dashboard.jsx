@@ -15,6 +15,11 @@ function Dashboard() {
   const [error, setError] = useState('');
   const [showCelebration, setShowCelebration] = useState(false);
 
+  // Quick khatma join
+  const [joiningJuz, setJoiningJuz] = useState(null);
+  const [joinName, setJoinName] = useState('');
+  const [joinError, setJoinError] = useState('');
+
   const participantId = localStorage.getItem('participantId');
   const participantName = localStorage.getItem('participantName');
 
@@ -75,7 +80,7 @@ function Dashboard() {
 
   const handleMarkComplete = async (pId) => {
     try {
-      const result = await api.markComplete(id, {
+      await api.markComplete(id, {
         participantId: pId,
         cycleNumber: data.cycleNumber
       });
@@ -96,6 +101,29 @@ function Dashboard() {
       setCompletions(compData);
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleJoinQuick = async (juzNum) => {
+    if (!joinName.trim()) {
+      setJoinError('الرجاء إدخال اسمك');
+      return;
+    }
+    setJoinError('');
+    try {
+      await api.joinQuickKhatma(id, {
+        name: joinName.trim(),
+        slotNumber: juzNum
+      });
+      setJoiningJuz(null);
+      setJoinName('');
+      // Refresh data
+      const result = await api.getDashboard(id);
+      setData(result);
+      const compData = await api.getCompletions(id, result.cycleNumber);
+      setCompletions(compData);
+    } catch (err) {
+      setJoinError(err.message);
     }
   };
 
@@ -124,6 +152,7 @@ function Dashboard() {
   if (error) return <div className="error-msg">{error}</div>;
   if (!data) return null;
 
+  const isQuick = data.khatma.is_quick;
   const myAssignment = participantId
     ? data.participants.find(p => p._id === participantId || p.id === Number(participantId))
     : null;
@@ -131,16 +160,30 @@ function Dashboard() {
   const isCompleted = (pId) => completions?.completedIds?.includes(pId);
   const incompleteCount = data.participants.filter(p => !isCompleted(p._id)).length;
 
+  // For quick khatma, find participant by slot_number directly (no rotation)
+  const getParticipantForJuz = (juzNum) => {
+    if (isQuick) {
+      return data.participants.find(p => p.slot_number === juzNum);
+    }
+    return data.participants.find(p => p.currentJuz === juzNum);
+  };
+
   return (
     <div>
       {showCelebration && <div className="celebration-overlay" />}
 
       <div className="card">
         <h2 className="card-title">{data.khatma.name}</h2>
-        <div className="week-info">
-          الختمة رقم <strong>{data.currentKhatmaNumber}</strong> — التكرار: {data.rotationLabel}
-        </div>
-        {completions && (
+        {isQuick ? (
+          <div className="week-info">
+            ختمة سريعة — {data.participants.length}/30 مشارك
+          </div>
+        ) : (
+          <div className="week-info">
+            الختمة رقم <strong>{data.currentKhatmaNumber}</strong> — التكرار: {data.rotationLabel}
+          </div>
+        )}
+        {completions && completions.totalParticipants > 0 && (
           <div className="completion-progress">
             <div className="progress-bar">
               <div
@@ -155,7 +198,7 @@ function Dashboard() {
         )}
       </div>
 
-      {completions?.allCompleted && (
+      {completions?.allCompleted && completions.totalParticipants > 0 && (
         <>
           <div className={`khatma-complete-banner ${showCelebration ? 'celebrating' : ''}`}>
             تمت الختمة بحمد الله
@@ -174,49 +217,94 @@ function Dashboard() {
         </div>
       )}
 
-      <DeceasedInfo dedication={data.dedication} useHijri={data.khatma.use_hijri} />
+      {!isQuick && <DeceasedInfo dedication={data.dedication} useHijri={data.khatma.use_hijri} />}
 
       {!data.paused && (
         <div className="card">
-          <h3 className="card-title">توزيع الأجزاء</h3>
+          <h3 className="card-title">
+            {isQuick ? 'اختر جزءك' : 'توزيع الأجزاء'}
+          </h3>
           <div className="juz-grid">
             {Array.from({ length: 30 }, (_, i) => i + 1).map(juzNum => {
-              const participant = data.participants.find(p => p.currentJuz === juzNum);
+              const participant = getParticipantForJuz(juzNum);
               const completed = participant && isCompleted(participant._id);
-              const isMyJuz = myAssignment?.currentJuz === juzNum;
+              const isMyJuz = isQuick
+                ? false
+                : myAssignment?.currentJuz === juzNum;
+              const isJoining = joiningJuz === juzNum;
 
               return (
                 <div key={juzNum} className={`juz-card ${isMyJuz ? 'highlighted' : ''} ${completed ? 'completed' : ''}`}>
                   <div className="juz-number">{juzNum}</div>
-                  <div className="participant-name">
-                    {participant ? participant.name : 'شاغر'}
-                  </div>
-                  <a
-                    href={`https://quran.com/juz/${juzNum}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="read-juz-btn"
-                  >
-                    اقرأ الجزء
-                  </a>
-                  {participant && completed && (
-                    <div className="completion-badge">تم</div>
-                  )}
-                  {participant && !completed && (
-                    <button
-                      className="btn-complete"
-                      onClick={() => handleMarkComplete(participant._id)}
-                    >
-                      أنهيت
-                    </button>
-                  )}
-                  {participant && completed && (
-                    <button
-                      className="btn-undo-complete"
-                      onClick={() => handleUndoComplete(participant._id)}
-                    >
-                      تراجع
-                    </button>
+
+                  {participant ? (
+                    <>
+                      <div className="participant-name">{participant.name}</div>
+                      <a
+                        href={`https://quran.com/juz/${juzNum}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="read-juz-btn"
+                      >
+                        اقرأ الجزء
+                      </a>
+                      {completed && <div className="completion-badge">تم</div>}
+                      {!completed && (
+                        <button
+                          className="btn-complete"
+                          onClick={() => handleMarkComplete(participant._id)}
+                        >
+                          أنهيت
+                        </button>
+                      )}
+                      {completed && (
+                        <button
+                          className="btn-undo-complete"
+                          onClick={() => handleUndoComplete(participant._id)}
+                        >
+                          تراجع
+                        </button>
+                      )}
+                    </>
+                  ) : isQuick ? (
+                    isJoining ? (
+                      <div className="quick-join-form">
+                        <input
+                          type="text"
+                          placeholder="اسمك"
+                          value={joinName}
+                          onChange={(e) => setJoinName(e.target.value)}
+                          className="quick-join-input"
+                          autoFocus
+                        />
+                        {joinError && <div style={{ color: '#c62828', fontSize: '0.7rem' }}>{joinError}</div>}
+                        <button className="btn-complete" onClick={() => handleJoinQuick(juzNum)}>
+                          تأكيد
+                        </button>
+                        <button className="btn-undo-complete" onClick={() => { setJoiningJuz(null); setJoinName(''); setJoinError(''); }}>
+                          إلغاء
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className="btn-join-juz"
+                        onClick={() => { setJoiningJuz(juzNum); setJoinName(''); setJoinError(''); }}
+                      >
+                        سجل اسمك
+                      </button>
+                    )
+                  ) : (
+                    <>
+                      <div className="participant-name">شاغر</div>
+                      <a
+                        href={`https://quran.com/juz/${juzNum}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="read-juz-btn"
+                      >
+                        اقرأ الجزء
+                      </a>
+                    </>
                   )}
                 </div>
               );
@@ -226,14 +314,16 @@ function Dashboard() {
       )}
 
       {/* Navigation Links */}
-      <div className="dashboard-nav no-print">
-        <button className="btn btn-secondary" onClick={() => navigate(`/khatma/${id}/history`)}>
-          السجل
-        </button>
-        <button className="btn btn-secondary" onClick={() => navigate(`/khatma/${id}/stats`)}>
-          الإحصائيات
-        </button>
-      </div>
+      {!isQuick && (
+        <div className="dashboard-nav no-print">
+          <button className="btn btn-secondary" onClick={() => navigate(`/khatma/${id}/history`)}>
+            السجل
+          </button>
+          <button className="btn btn-secondary" onClick={() => navigate(`/khatma/${id}/stats`)}>
+            الإحصائيات
+          </button>
+        </div>
+      )}
 
       <div className="dashboard-actions no-print">
         {incompleteCount > 0 && !data.paused && (
