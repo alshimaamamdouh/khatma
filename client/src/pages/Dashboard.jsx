@@ -39,6 +39,61 @@ function Dashboard() {
     window.open(url, '_blank');
   };
 
+  const handleShareFull = () => {
+    if (!data) return;
+    const khatmaName = data.khatma.name || '';
+    const isQ = data.khatma.is_quick;
+
+    let text = `بسم الله الرحمن الرحيم\n`;
+    text += `\n📖 *${khatmaName}*`;
+    if (!isQ) {
+      text += `\nالختمة رقم: *${data.currentKhatmaNumber}*`;
+    }
+    text += `\n`;
+
+    // Dedication
+    if (!isQ && data.dedication?.dedicated?.length > 0) {
+      const names = data.dedication.dedicated.map(d => d.name).join(' و ');
+      text += `\n🤲 *الإهداء:* ${names}\n`;
+    }
+
+    // Participants with juz
+    text += `\n📋 *توزيع الأجزاء:*\n`;
+    const sorted = [...data.participants].sort((a, b) => {
+      const juzA = isQ ? a.slot_number : a.currentJuz;
+      const juzB = isQ ? b.slot_number : b.currentJuz;
+      return juzA - juzB;
+    });
+    sorted.forEach(p => {
+      const juz = isQ ? p.slot_number : p.currentJuz;
+      const done = completions?.completedIds?.includes(p._id) ? ' ✅' : '';
+      text += `الجزء ${juz} ← ${p.name}${done}\n`;
+    });
+
+    // Empty slots
+    const takenJuz = new Set(sorted.map(p => isQ ? p.slot_number : p.currentJuz));
+    const emptySlots = [];
+    for (let i = 1; i <= 30; i++) {
+      if (!takenJuz.has(i)) emptySlots.push(i);
+    }
+    if (emptySlots.length > 0) {
+      text += `\n⬜ *أجزاء شاغرة:* ${emptySlots.join('، ')}\n`;
+    }
+
+    // Progress
+    if (completions && completions.totalParticipants > 0) {
+      text += `\n📊 الإنجاز: ${completions.completedCount}/${completions.totalParticipants}`;
+      if (completions.allCompleted) {
+        text += `\n\n🎉 *تمت الختمة بحمد الله*`;
+      }
+    }
+
+    text += `\n\nجزاكم الله خيراً`;
+
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
   const handleWhatsAppReminder = () => {
     if (!data || !completions) return;
     const incomplete = data.participants.filter(p => !completions.completedIds?.includes(p._id));
@@ -326,19 +381,22 @@ function Dashboard() {
       )}
 
       <div className="dashboard-actions no-print">
+        <button className="btn btn-primary" onClick={handleShareFull}>
+          مشاركة الختمة كاملة
+        </button>
         {incompleteCount > 0 && !data.paused && (
           <button className="btn btn-primary" onClick={handleWhatsAppReminder}>
             تذكير ({incompleteCount})
           </button>
         )}
+        <button className="btn btn-secondary" onClick={handleWhatsAppShare}>
+          مشاركة الرمز
+        </button>
         <button className="btn btn-secondary" onClick={handleExport}>
           تصدير CSV
         </button>
         <button className="btn btn-secondary" onClick={() => window.print()}>
           طباعة
-        </button>
-        <button className="btn btn-primary" onClick={handleWhatsAppShare}>
-          مشاركة واتساب
         </button>
         <button className="btn btn-secondary" onClick={handleLogout}>
           تسجيل الخروج
