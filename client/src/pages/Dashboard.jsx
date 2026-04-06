@@ -395,9 +395,6 @@ function Dashboard() {
         <button className="btn btn-secondary" onClick={handleExport}>
           تصدير CSV
         </button>
-        <button className="btn btn-secondary" onClick={() => window.print()}>
-          طباعة
-        </button>
         <button className="btn btn-secondary" onClick={handleLogout}>
           تسجيل الخروج
         </button>
