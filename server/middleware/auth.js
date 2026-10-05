@@ -1,8 +1,18 @@
 const mongoose = require('mongoose');
 const Khatma = require('../models/Khatma');
 
+// Client URL-encodes header values so non-Latin (Arabic) text survives
+function decodeHeader(value) {
+  if (!value) return value;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 async function authMiddleware(req, res, next) {
-  const code = req.headers['x-khatma-code'];
+  const code = decodeHeader(req.headers['x-khatma-code']);
   const khatmaId = req.params.id;
 
   if (!code) {
@@ -28,7 +38,7 @@ async function authMiddleware(req, res, next) {
 }
 
 async function adminMiddleware(req, res, next) {
-  const adminPassword = req.headers['x-admin-password'];
+  const adminPassword = decodeHeader(req.headers['x-admin-password']);
   const khatmaId = req.params.id;
 
   if (!adminPassword) {

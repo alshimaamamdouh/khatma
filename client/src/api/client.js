@@ -6,8 +6,9 @@ async function request(endpoint, options = {}) {
 
   const headers = {
     'Content-Type': 'application/json',
-    ...(code ? { 'x-khatma-code': code } : {}),
-    ...(adminPassword ? { 'x-admin-password': adminPassword } : {}),
+    // Header values must be ISO-8859-1, so encode to allow Arabic codes/passwords
+    ...(code ? { 'x-khatma-code': encodeURIComponent(code) } : {}),
+    ...(adminPassword ? { 'x-admin-password': encodeURIComponent(adminPassword) } : {}),
     ...options.headers
   };
 
