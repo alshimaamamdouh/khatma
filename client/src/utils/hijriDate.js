@@ -5,9 +5,9 @@ const hijriMonths = [
 ];
 
 function gregorianToHijri(year, month, day) {
-  const jd = Math.floor((1461 * (year + 4800 + Math.floor((month - 14) / 12))) / 4) +
-    Math.floor((367 * (month - 2 - 12 * Math.floor((month - 14) / 12))) / 12) -
-    Math.floor((3 * Math.floor((year + 4900 + Math.floor((month - 14) / 12)) / 100)) / 4) + day - 32075;
+  const jd = Math.floor((1461 * (year + 4800 + Math.trunc((month - 14) / 12))) / 4) +
+    Math.floor((367 * (month - 2 - 12 * Math.trunc((month - 14) / 12))) / 12) -
+    Math.floor((3 * Math.floor((year + 4900 + Math.trunc((month - 14) / 12)) / 100)) / 4) + day - 32075;
 
   const l = jd - 1948440 + 10632;
   const n = Math.floor((l - 1) / 10631);

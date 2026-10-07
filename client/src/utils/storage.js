@@ -15,7 +15,11 @@ function safeRemove(key) {
 }
 
 function readAll() {
-  try { return JSON.parse(safeGet(KHATMAS_KEY)) || {}; } catch { return {}; }
+  try {
+    const parsed = JSON.parse(safeGet(KHATMAS_KEY));
+    // Anything but a plain object (string, number, array, null) is corrupt: treat as empty
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch { return {}; }
 }
 function writeAll(all) {
   safeSet(KHATMAS_KEY, JSON.stringify(all));
