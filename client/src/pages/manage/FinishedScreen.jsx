@@ -42,7 +42,11 @@ function FinishedScreen() {
   return (
     <div>
       <h3 className="section-title">تسجيل من أنهى القراءة</h3>
-      <p className="hint">{ar(completions.completedCount)} من {ar(completions.totalParticipants)} أنهوا القراءة</p>
+      <p className="hint">
+        {completions.completedCount === 0
+          ? 'لم يُسجِّل أحد إنهاء القراءة بعد'
+          : `${ar(completions.completedCount)} من ${ar(completions.totalParticipants)} أنهوا القراءة`}
+      </p>
       {(error || loadError) && <div className="error-msg">{error || loadError}</div>}
 
       <div className="big-list">

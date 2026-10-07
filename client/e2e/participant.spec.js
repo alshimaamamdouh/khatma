@@ -40,6 +40,7 @@ test('participant opens link, picks name, finishes, undoes, is remembered', asyn
   await page.getByRole('button', { name: 'نعم، تراجع' }).click();
   await expect(page.getByRole('button', { name: /أنهيت قراءة الجزء/ })).toBeVisible();
   expect(await completedCount(request, k)).toBe(0);
+  await expect(page.getByText('لم يُسجِّل أحد إنهاء القراءة بعد')).toBeVisible();
 
   // Remembered after reload
   await page.reload();

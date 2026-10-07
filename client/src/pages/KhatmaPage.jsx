@@ -158,7 +158,10 @@ function KhatmaPage() {
             />
           </div>
           <p className="progress-sentence">
-            {ar(completions.completedCount)} من {ar(completions.totalParticipants)} شخصًا أنهوا القراءة
+            {/* The Arabic zero (٠) looks like a dot, so say it in words */}
+            {completions.completedCount === 0
+              ? 'لم يُسجِّل أحد إنهاء القراءة بعد'
+              : `${ar(completions.completedCount)} من ${ar(completions.totalParticipants)} شخصًا أنهوا القراءة`}
           </p>
         </div>
       )}
