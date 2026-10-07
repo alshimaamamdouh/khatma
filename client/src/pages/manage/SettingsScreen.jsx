@@ -142,7 +142,7 @@ function SettingsScreen() {
 
         <label className="big-label" htmlFor="set-phone">رقم واتساب للمساعدة (اختياري)</label>
         <input id="set-phone" className="big-input" inputMode="tel" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        <p className="hint">مع رمز الدولة، مثال: 973xxxxxxxx</p>
+        <p className="hint">مع مفتاح الدولة، مثال: 973xxxxxxxx</p>
 
         <button type="button" className="btn btn-big btn-secondary" onClick={() => setShowAdvanced(!showAdvanced)} aria-expanded={showAdvanced}>
           {showAdvanced ? 'إخفاء الخيارات المتقدمة ▲' : 'خيارات متقدمة ▼'}

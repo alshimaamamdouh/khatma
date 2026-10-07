@@ -13,7 +13,12 @@ const SCHEDULES = [
   ['monthly', 'كل شهر']
 ];
 
-const today = () => new Date().toISOString().split('T')[0];
+// Local date (YYYY-MM-DD); toISOString() would give the UTC date
+const today = () => {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 function CreateKhatma() {
   const [isQuick, setIsQuick] = useState(null); // null = choosing
@@ -141,7 +146,7 @@ function CreateKhatma() {
 
         <label className="big-label" htmlFor="create-phone">رقم واتساب للمساعدة (اختياري)</label>
         <input id="create-phone" className="big-input" inputMode="tel" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        <p className="hint">ليتواصل معك المشاركون إذا احتاجوا مساعدة. مع رمز الدولة، مثال: 973xxxxxxxx</p>
+        <p className="hint">ليتواصل معك المشاركون إذا احتاجوا مساعدة. مع مفتاح الدولة، مثال: 973xxxxxxxx</p>
 
         {!isQuick && (
           <>
