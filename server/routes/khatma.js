@@ -5,7 +5,8 @@ const Participant = require('../models/Participant');
 const Deceased = require('../models/Deceased');
 const Completion = require('../models/Completion');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-const { getCycleNumber, getCurrentJuz, getCycleDedication, isPaused, getRotationLabel, getCycleDays } = require('../utils/rotation');
+const { getCycleNumber, getCurrentJuz, getCycleDedication, isPaused, getRotationLabel, getCycleDays, getNextChangeDate } = require('../utils/rotation');
+const { normalizePhone } = require('../utils/phone');
 
 // Access a Khatma by code (participant login)
 router.post('/access', async (req, res) => {
@@ -57,6 +58,7 @@ router.post('/admin-login', async (req, res) => {
         use_hijri: khatma.use_hijri,
         is_quick: khatma.is_quick,
         khatma_number: khatma.khatma_number,
+        organizer_phone: khatma.organizer_phone || null,
         created_at: khatma.created_at
       },
       participants,
@@ -69,7 +71,7 @@ router.post('/admin-login', async (req, res) => {
 
 // Create a new Khatma
 router.post('/', async (req, res) => {
-  const { name, accessCode, adminPassword, startDate, rotationType, customDays, useHijri, khatmaNumber, isQuick, participants, deceased } = req.body;
+  const { name, accessCode, adminPassword, startDate, rotationType, customDays, useHijri, khatmaNumber, isQuick, organizerPhone, participants, deceased } = req.body;
 
   if (!name || !accessCode || !adminPassword || !startDate) {
     return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
@@ -90,7 +92,8 @@ router.post('/', async (req, res) => {
       custom_days: rotationType === 'custom' ? (customDays || 7) : null,
       use_hijri: useHijri || false,
       is_quick: isQuick || false,
-      khatma_number: khatmaNumber || 1
+      khatma_number: khatmaNumber || 1,
+      organizer_phone: normalizePhone(organizerPhone)
     });
 
     if (participants && participants.length > 0) {
@@ -175,6 +178,9 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
     const cycleDays = getCycleDays(khatma.rotation_type, khatma.custom_days);
     const dedication = getCycleDedication(deceasedList, cycleNumber, new Date(), cycleDays);
     const rotationLabel = getRotationLabel(khatma.rotation_type, khatma.custom_days);
+    const nextChangeDate = (khatma.is_quick || paused)
+      ? null
+      : getNextChangeDate(khatma.start_date, khatma.rotation_type, khatma.custom_days);
 
     res.json({
       khatma: {
@@ -188,11 +194,13 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
         paused_to: khatma.paused_to,
         use_hijri: khatma.use_hijri,
         is_quick: khatma.is_quick,
-        khatma_number: khatma.khatma_number
+        khatma_number: khatma.khatma_number,
+        organizer_phone: khatma.organizer_phone || null
       },
       cycleNumber: cycleNumber + 1,
       currentKhatmaNumber: (khatma.khatma_number || 1) + cycleNumber,
       rotationLabel,
+      nextChangeDate,
       paused,
       participants: participantsWithJuz,
       dedication,
@@ -205,7 +213,7 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
 
 // Update Khatma (admin only)
 router.put('/:id', adminMiddleware, async (req, res) => {
-  const { name, startDate, rotationType, customDays, pausedFrom, pausedTo, useHijri } = req.body;
+  const { name, startDate, rotationType, customDays, pausedFrom, pausedTo, useHijri, organizerPhone } = req.body;
   const update = {};
 
   if (name) update.name = name;
@@ -218,6 +226,7 @@ router.put('/:id', adminMiddleware, async (req, res) => {
   if (pausedFrom !== undefined) update.paused_from = pausedFrom || null;
   if (pausedTo !== undefined) update.paused_to = pausedTo || null;
   if (useHijri !== undefined) update.use_hijri = useHijri;
+  if (organizerPhone !== undefined) update.organizer_phone = normalizePhone(organizerPhone);
 
   if (Object.keys(update).length === 0) {
     return res.status(400).json({ error: 'لا توجد بيانات للتحديث' });

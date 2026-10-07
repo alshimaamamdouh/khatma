@@ -139,4 +139,27 @@ function getRotationLabel(rotationType, customDays) {
   }
 }
 
-module.exports = { getCycleNumber, getCurrentJuz, getCycleDedication, isPaused, getRotationLabel, getCycleDays };
+function toDateString(date) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/**
+ * Date (YYYY-MM-DD) when the participants' juz next changes, or null for daily khatmas.
+ * Cycle boundaries are always start + k * cycleDays (pauses skip whole cycles, they don't move boundaries).
+ */
+function getNextChangeDate(startDate, rotationType, customDays, currentDate = new Date()) {
+  if (rotationType === 'daily') return null;
+  const cycleDays = getCycleDays(rotationType, customDays);
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  const now = new Date(currentDate);
+  now.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((now - start) / (1000 * 60 * 60 * 24));
+  const cyclesDone = Math.max(0, Math.floor(diffDays / cycleDays));
+  const next = new Date(start);
+  next.setDate(next.getDate() + (cyclesDone + 1) * cycleDays);
+  return toDateString(next);
+}
+
+module.exports = { getCycleNumber, getCurrentJuz, getCycleDedication, isPaused, getRotationLabel, getCycleDays, getNextChangeDate };

@@ -12,6 +12,7 @@ const khatmaSchema = new mongoose.Schema({
   is_quick: { type: Boolean, default: false },
   khatma_number: { type: Number, default: 1 },
   use_hijri: { type: Boolean, default: false },
+  organizer_phone: { type: String, default: null },
   created_at: { type: Date, default: Date.now }
 });
 
