@@ -1,77 +1,56 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { api } from '../api/client';
+import { getActive } from '../utils/storage';
+import { khatmaPath } from '../utils/links';
 
 function HomePage() {
+  const navigate = useNavigate();
+  const active = getActive();
+  const [showCode, setShowCode] = useState(false);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    const savedCode = localStorage.getItem('khatmaCode');
-    const savedId = localStorage.getItem('khatmaId');
-    if (savedCode && savedId) {
-      navigate(`/khatma/${savedId}/dashboard`);
-    }
-  }, [navigate]);
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!code.trim()) {
-      setError('الرجاء إدخال رمز الختمة');
+      setError('الرجاء كتابة رمز الختمة');
       return;
     }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const data = await api.access(code.trim());
-      localStorage.setItem('khatmaCode', code.trim());
-      localStorage.setItem('khatmaId', data.khatma._id);
-      localStorage.setItem('khatmaName', data.khatma.name);
-      navigate(`/khatma/${data.khatma._id}/dashboard`);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    navigate(khatmaPath(code.trim()));
   };
 
   return (
-    <div className="home-page">
+    <div>
       <div className="bismillah">بسم الله الرحمن الرحيم</div>
 
-      <div className="card access-form">
-        <h2 className="card-title">الدخول إلى الختمة</h2>
+      {active?.code && (
+        <Link to={khatmaPath(active.code)} className="btn btn-big btn-primary">
+          ↩️ العودة إلى: {active.name || 'ختمتي'}
+        </Link>
+      )}
 
-        {error && <div className="error-msg">{error}</div>}
+      <p className="home-intro">هنا تنظّم ختم القرآن الكريم مع عائلتك وأحبابك، وكل شخص يقرأ جزءًا.</p>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <input
-              type="text"
-              placeholder="أدخل رمز الختمة"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-            {loading ? 'جاري الدخول...' : 'دخول'}
-          </button>
+      <Link to="/create" className={`btn btn-big ${active?.code ? 'btn-secondary' : 'btn-primary'}`}>
+        ➕ إنشاء ختمة جديدة
+      </Link>
+
+      <p className="hint">إذا وصلك رابط ختمة على واتساب، اضغط عليه مباشرة.</p>
+
+      {showCode ? (
+        <form className="card" onSubmit={handleSubmit}>
+          <label className="big-label" htmlFor="home-code">رمز الختمة</label>
+          <input id="home-code" className="big-input" value={code} onChange={(e) => setCode(e.target.value)} autoFocus />
+          {error && <div className="error-msg">{error}</div>}
+          <button type="submit" className="btn btn-big btn-primary">دخول</button>
         </form>
+      ) : (
+        <button className="btn btn-big btn-secondary" onClick={() => setShowCode(true)}>
+          عندك رمز الختمة؟ اكتبه هنا
+        </button>
+      )}
 
-        <div className="home-links">
-          <Link to="/admin/create" className="btn btn-primary btn-sm">
-            إنشاء ختمة جديدة
-          </Link>
-          <Link to="/admin/manage" className="btn btn-secondary btn-sm">
-            إدارة ختمة موجودة
-          </Link>
-        </div>
-      </div>
+      <Link to="/manage-login" className="link-button">دخول المنظم بالرمز وكلمة المرور</Link>
     </div>
   );
 }
