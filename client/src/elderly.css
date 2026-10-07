@@ -9,6 +9,16 @@ html {
 
 body {
   line-height: 1.7;
+  /* A very long name with no spaces must wrap instead of widening the page */
+  overflow-wrap: anywhere;
+}
+
+.big-row-main,
+.big-row-button,
+.big-question,
+.khatma-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .container {

@@ -50,3 +50,33 @@ export async function completedCount(request, k) {
   });
   return (await res.json()).completedCount;
 }
+
+// ---- Extra helpers for the layout / error / edge-case specs ----
+const adminHeaders = k => ({ 'x-admin-password': enc(k.password), 'x-khatma-code': enc(k.code) });
+
+export async function updateKhatma(request, k, data) {
+  return request.put(`${API}/khatma/${k.id}`, { headers: adminHeaders(k), data });
+}
+
+export async function deleteParticipant(request, k, participantId) {
+  return request.delete(`${API}/khatma/${k.id}/participants/${participantId}`, { headers: adminHeaders(k) });
+}
+
+// The organizer records a reading for any participant in the current cycle
+export async function markCompleteAsAdmin(request, k, participantId) {
+  const dash = await dashboard(request, k);
+  return request.post(`${API}/khatma/${k.id}/completions`, {
+    headers: adminHeaders(k),
+    data: { participantId, cycleNumber: dash.cycleNumber }
+  });
+}
+
+export async function addMany(request, k, names, startSlot = 1) {
+  const out = [];
+  for (let i = 0; i < names.length; i++) out.push(await addParticipant(request, k, names[i], startSlot + i));
+  return out;
+}
+
+export async function getKhatmaData(request, k) {
+  return (await dashboard(request, k)).khatma;
+}
