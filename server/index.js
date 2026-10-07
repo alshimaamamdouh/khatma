@@ -34,6 +34,12 @@ app.get('/api', (req, res) => {
   res.json({ status: 'ok', message: 'Khatma API is running' });
 });
 
+// Malformed URLs / bodies get a JSON error instead of an HTML page with a stack trace
+app.use((err, req, res, next) => {
+  const status = err.status || err.statusCode || 500;
+  res.status(status >= 400 && status < 500 ? status : 500).json({ error: status < 500 ? 'طلب غير صحيح' : 'حدث خطأ' });
+});
+
 // Local dev server
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;

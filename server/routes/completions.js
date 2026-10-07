@@ -78,6 +78,9 @@ router.delete('/', async (req, res) => {
 router.get('/:cycleNumber', async (req, res) => {
   try {
     const cycleNumber = Number(req.params.cycleNumber);
+    if (!Number.isInteger(cycleNumber)) {
+      return res.status(400).json({ error: 'بيانات غير مكتملة' });
+    }
     const totalParticipants = await Participant.countDocuments({ khatma_id: req.khatma._id });
     const completions = await Completion.find({
       khatma_id: req.khatma._id,

@@ -1,5 +1,7 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router({ mergeParams: true });
+const isId = id => mongoose.Types.ObjectId.isValid(id) && String(id).length === 24;
 const Deceased = require('../models/Deceased');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
@@ -17,7 +19,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.post('/', adminMiddleware, async (req, res) => {
   const { name, deathDate } = req.body;
 
-  if (!name || !deathDate) {
+  if (!name || !deathDate || typeof name !== 'string' || typeof deathDate !== 'string') {
     return res.status(400).json({ error: 'الاسم وتاريخ الوفاة مطلوبان' });
   }
 
@@ -38,6 +40,13 @@ router.put('/:did', adminMiddleware, async (req, res) => {
   const { name, deathDate } = req.body;
   const update = {};
 
+  if ((name != null && typeof name !== 'string') || (deathDate != null && typeof deathDate !== 'string')) {
+    return res.status(400).json({ error: 'بيانات غير صحيحة' });
+  }
+  if (!isId(req.params.did)) {
+    return res.status(404).json({ error: 'السجل غير موجود' });
+  }
+
   if (name) update.name = name;
   if (deathDate) update.death_date = deathDate;
 
@@ -49,7 +58,7 @@ router.put('/:did', adminMiddleware, async (req, res) => {
     const result = await Deceased.findOneAndUpdate(
       { _id: req.params.did, khatma_id: req.khatma._id },
       update,
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!result) {
@@ -63,6 +72,9 @@ router.put('/:did', adminMiddleware, async (req, res) => {
 
 // Delete deceased (admin only)
 router.delete('/:did', adminMiddleware, async (req, res) => {
+  if (!isId(req.params.did)) {
+    return res.status(404).json({ error: 'السجل غير موجود' });
+  }
   try {
     const result = await Deceased.findOneAndDelete({
       _id: req.params.did,

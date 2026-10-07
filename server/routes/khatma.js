@@ -9,6 +9,10 @@ const { getCycleNumber, getCurrentJuz, getCycleDedication, isPaused, getRotation
 const { normalizePhone } = require('../utils/phone');
 const { newToken } = require('../utils/token');
 
+const ROTATION_TYPES = ['daily', 'weekly', 'biweekly', 'monthly', 'custom'];
+const isValidCustomDays = v => v === undefined || v === null || v === '' || (Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 365);
+const isValidSlot = n => Number.isInteger(n) && n >= 1 && n <= 30;
+
 // Access a Khatma by code (participant login)
 router.post('/access', async (req, res) => {
   const { code } = req.body;
@@ -75,8 +79,15 @@ router.post('/', async (req, res) => {
   const { name, accessCode, adminPassword, startDate, rotationType, customDays, useHijri, khatmaNumber, isQuick, organizerPhone, participants, deceased } = req.body;
 
   if (!name || !accessCode || !adminPassword || !startDate ||
-      typeof name !== 'string' || typeof accessCode !== 'string' || typeof adminPassword !== 'string') {
+      typeof name !== 'string' || typeof accessCode !== 'string' || typeof adminPassword !== 'string' ||
+      typeof startDate !== 'string') {
     return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
+  }
+  if (rotationType !== undefined && rotationType !== null && !ROTATION_TYPES.includes(rotationType)) {
+    return res.status(400).json({ error: 'نوع التدوير غير صحيح' });
+  }
+  if (rotationType === 'custom' && !isValidCustomDays(customDays)) {
+    return res.status(400).json({ error: 'عدد الأيام غير صحيح' });
   }
 
   try {
@@ -98,22 +109,30 @@ router.post('/', async (req, res) => {
       organizer_phone: normalizePhone(organizerPhone)
     });
 
-    if (participants && participants.length > 0) {
-      const docs = participants.map(p => ({
-        khatma_id: khatma._id,
-        name: p.name,
-        slot_number: p.slotNumber
-      }));
-      await Participant.insertMany(docs);
-    }
+    try {
+      if (participants && participants.length > 0) {
+        const docs = participants.map(p => ({
+          khatma_id: khatma._id,
+          name: p.name,
+          slot_number: p.slotNumber
+        }));
+        await Participant.insertMany(docs);
+      }
 
-    if (deceased && deceased.length > 0) {
-      const docs = deceased.map(d => ({
-        khatma_id: khatma._id,
-        name: d.name,
-        death_date: d.deathDate
-      }));
-      await Deceased.insertMany(docs);
+      if (deceased && deceased.length > 0) {
+        const docs = deceased.map(d => ({
+          khatma_id: khatma._id,
+          name: d.name,
+          death_date: d.deathDate
+        }));
+        await Deceased.insertMany(docs);
+      }
+    } catch (childErr) {
+      // Don't leave a half-created khatma behind (it would also block the access code)
+      await Participant.deleteMany({ khatma_id: khatma._id });
+      await Deceased.deleteMany({ khatma_id: khatma._id });
+      await Khatma.findByIdAndDelete(khatma._id);
+      return res.status(400).json({ error: 'بيانات الأسماء غير صحيحة' });
     }
 
     res.status(201).json({ id: khatma._id, message: 'تم إنشاء الختمة بنجاح' });
@@ -126,11 +145,11 @@ router.post('/', async (req, res) => {
 router.post('/:id/join', authMiddleware, async (req, res) => {
   const { name, slotNumber } = req.body;
 
-  if (!name || !slotNumber) {
+  if (!name || typeof name !== 'string' || !slotNumber) {
     return res.status(400).json({ error: 'الاسم ورقم الجزء مطلوبان' });
   }
 
-  if (slotNumber < 1 || slotNumber > 30) {
+  if (!isValidSlot(slotNumber)) {
     return res.status(400).json({ error: 'رقم الجزء يجب أن يكون بين 1 و 30' });
   }
 
@@ -223,6 +242,14 @@ router.get('/:id/dashboard', authMiddleware, async (req, res) => {
 router.put('/:id', adminMiddleware, async (req, res) => {
   const { name, startDate, rotationType, customDays, pausedFrom, pausedTo, useHijri, organizerPhone } = req.body;
   const update = {};
+
+  if ([name, startDate, rotationType].some(v => v != null && typeof v !== 'string') ||
+      (rotationType && !ROTATION_TYPES.includes(rotationType))) {
+    return res.status(400).json({ error: 'بيانات غير صحيحة' });
+  }
+  if (rotationType === 'custom' && !isValidCustomDays(customDays)) {
+    return res.status(400).json({ error: 'عدد الأيام غير صحيح' });
+  }
 
   if (name) update.name = name;
   if (startDate) update.start_date = startDate;

@@ -5,6 +5,8 @@ const router = express.Router({ mergeParams: true });
 const Participant = require('../models/Participant');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
+const isId = id => mongoose.Types.ObjectId.isValid(id) && String(id).length === 24;
+
 // Get all participants (any authenticated user)
 router.get('/', authMiddleware, async (req, res) => {
   try {
@@ -19,11 +21,11 @@ router.get('/', authMiddleware, async (req, res) => {
 router.post('/', adminMiddleware, async (req, res) => {
   const { name, slotNumber } = req.body;
 
-  if (!name || !slotNumber) {
+  if (!name || typeof name !== 'string' || !slotNumber) {
     return res.status(400).json({ error: 'الاسم ورقم الترتيب مطلوبان' });
   }
 
-  if (slotNumber < 1 || slotNumber > 30) {
+  if (!Number.isInteger(slotNumber) || slotNumber < 1 || slotNumber > 30) {
     return res.status(400).json({ error: 'رقم الترتيب يجب أن يكون بين 1 و 30' });
   }
 
@@ -45,15 +47,18 @@ router.post('/', adminMiddleware, async (req, res) => {
 // Update participant (admin only)
 router.put('/:pid', adminMiddleware, async (req, res) => {
   const { name } = req.body;
-  if (!name) {
+  if (!name || typeof name !== 'string') {
     return res.status(400).json({ error: 'الاسم مطلوب' });
+  }
+  if (!isId(req.params.pid)) {
+    return res.status(404).json({ error: 'المشارك غير موجود' });
   }
 
   try {
     const result = await Participant.findOneAndUpdate(
       { _id: req.params.pid, khatma_id: req.khatma._id },
       { name },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!result) {
@@ -71,6 +76,9 @@ router.put('/:pid/swap', adminMiddleware, async (req, res) => {
 
   if (!targetPid) {
     return res.status(400).json({ error: 'المشارك الهدف مطلوب' });
+  }
+  if (!isId(req.params.pid) || !isId(targetPid)) {
+    return res.status(404).json({ error: 'المشارك غير موجود' });
   }
 
   try {
@@ -94,6 +102,9 @@ router.put('/:pid/swap', adminMiddleware, async (req, res) => {
 
 // Delete participant (admin only)
 router.delete('/:pid', adminMiddleware, async (req, res) => {
+  if (!isId(req.params.pid)) {
+    return res.status(404).json({ error: 'المشارك غير موجود' });
+  }
   try {
     const result = await Participant.findOneAndDelete({
       _id: req.params.pid,
