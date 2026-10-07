@@ -26,8 +26,8 @@ function ManageEntry() {
         saveKhatma(data.khatma._id, { code, adminPassword: password, name: data.khatma.name });
         setActive(data.khatma._id);
         navigate(`${khatmaPath(code)}/manage`, { replace: true });
-      } catch {
-        if (!cancelled) setError('رابط الإدارة غير صحيح. تأكد أنك فتحت الرسالة الصحيحة.');
+      } catch (err) {
+        if (!cancelled) setError(err.status ? 'رابط الإدارة غير صحيح. تأكد أنك فتحت الرسالة الصحيحة.' : err.message);
       }
     })();
     return () => { cancelled = true; };

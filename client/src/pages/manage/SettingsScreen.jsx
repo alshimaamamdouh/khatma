@@ -36,6 +36,7 @@ function SettingsScreen() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmStep, setConfirmStep] = useState(0); // 0 none, 1 first, 2 final
+  const [confirmSchedule, setConfirmSchedule] = useState(false);
   const [copy, setCopy] = useState(null); // { code, password, name }
   const busyRef = useRef(false);
   const readyAt = useRef(0);
@@ -61,17 +62,26 @@ function SettingsScreen() {
     }
   };
 
-  const save = (e) => {
-    e.preventDefault();
+  const save = (e, confirmedSchedule = false) => {
+    e?.preventDefault();
     if (!name.trim()) { setMessage(''); return setError('الرجاء كتابة اسم الختمة'); }
-    const custom = Number(customDays);
+    const custom = Math.floor(Number(customDays));
+    const nextType = custom >= 1 ? 'custom' : rotationType;
+    const nextDays = custom >= 1 ? custom : null;
+    const scheduleChanged = !khatma.is_quick && (
+      nextType !== khatma.rotation_type ||
+      (nextType === 'custom' && nextDays !== khatma.custom_days) ||
+      startDate !== khatma.start_date
+    );
+    if (scheduleChanged && !confirmedSchedule) { setConfirmSchedule(true); return; }
+    setConfirmSchedule(false);
     run(async () => {
       await api.updateKhatma(khatmaId, {
         name: name.trim(),
         organizerPhone: phone,
         ...(khatma.is_quick ? {} : {
-          rotationType: custom >= 1 ? 'custom' : rotationType,
-          customDays: custom >= 1 ? custom : null,
+          rotationType: nextType,
+          customDays: nextDays,
           startDate,
           useHijri,
           khatmaNumber: Number(khatmaNumber) || 1
@@ -181,6 +191,15 @@ function SettingsScreen() {
       )}
 
       <BackButton to=".." />
+
+      {confirmSchedule && (
+        <ConfirmDialog
+          message="تغيير موعد تغيّر الأجزاء سيغيّر جزء كل شخص. هل تريد المتابعة؟"
+          confirmLabel="نعم، احفظ"
+          onConfirm={() => save(null, true)}
+          onCancel={() => setConfirmSchedule(false)}
+        />
+      )}
 
       {confirmStep === 1 && (
         <ConfirmDialog

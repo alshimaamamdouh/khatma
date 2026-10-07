@@ -73,7 +73,10 @@ export function migrateLegacyStorage() {
     saveKhatma(id, adminPassword ? { code, adminPassword } : { code });
     setActive(id);
   }
-  ['khatmaCode', 'khatmaId', 'khatmaName', 'adminPassword', 'participantId',
-    'participantName', 'participantSlot', 'darkMode'].forEach(safeRemove);
+  // Only drop the old credentials once the new record reads back correctly
+  const migrated = !code || !id || getKhatma(id)?.code === code;
+  const keys = ['khatmaName', 'participantId', 'participantName', 'participantSlot', 'darkMode'];
+  if (migrated) keys.push('khatmaCode', 'khatmaId', 'adminPassword');
+  keys.forEach(safeRemove);
   document.documentElement.removeAttribute('data-theme');
 }

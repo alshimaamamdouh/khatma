@@ -110,3 +110,22 @@ test('unknown link shows a friendly message', async ({ page }) => {
   await expect(page.getByText('تأكد من الرابط، أو اسأل منظم الختمة.')).toBeVisible();
   await expect(page.getByText(/رمز/)).toHaveCount(0);
 });
+
+test('marking a reading uses the khatma on screen, not the last opened one', async ({ page, request }) => {
+  const a = await createKhatma(request);
+  await addParticipant(request, a, 'محمد أحمد', 1);
+  const b = await createKhatma(request);
+  await addParticipant(request, b, 'سعيد علي', 1);
+
+  // Open B first so it is stored, then claim in A
+  await page.goto(`/k/${encodeURIComponent(b.code)}`);
+  await expect(page.getByText('مَن أنت؟ اضغط على اسمك')).toBeVisible();
+  await claimAs(page, a, 'محمد أحمد');
+
+  // Another tab opening B would make it the active khatma
+  await page.evaluate((id) => localStorage.setItem('activeKhatmaId', id), b.id);
+
+  await page.getByRole('button', { name: /أنهيت قراءة الجزء/ }).click();
+  await expect(page.getByText('تم تسجيل أنك أنهيت الجزء ١.')).toBeVisible();
+  expect(await completedCount(request, a)).toBe(1);
+});

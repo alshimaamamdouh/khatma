@@ -67,8 +67,8 @@ function KhatmaPage() {
 
   const handleJoined = async (participantId, token) => {
     saveKhatma(khatmaId, { participantId, participantToken: token });
-    await load(khatmaId);
     setMe(participantId);
+    try { await load(khatmaId); } catch { /* joined already; keep the page we have */ }
   };
 
   const handleChangeName = () => {

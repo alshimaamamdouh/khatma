@@ -16,7 +16,7 @@ function ManageLayout() {
       const data = await api.adminLogin(code, password);
       setState({ loading: false, error: '', khatma: data.khatma, participants: data.participants, deceased: data.deceased });
     } catch (err) {
-      setState(s => ({ ...s, loading: false, error: err.message || 'تعذر التحميل' }));
+      setState(s => ({ ...s, loading: false, error: err.status === 404 ? 'افتح رابط الإدارة من رسالة واتساب مرة أخرى.' : (err.message || 'تعذر التحميل') }));
     }
   }, [code, password]);
 

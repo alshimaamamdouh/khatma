@@ -117,3 +117,18 @@ test('an expired pause shows the normal pause form', async ({ page, request }) =
   await page.getByRole('link', { name: /إيقاف مؤقت/ }).click();
   await expect(page.getByRole('button', { name: 'إيقاف الختمة' })).toBeVisible();
 });
+
+test('settings: changing the schedule asks first because everyone\'s juz moves', async ({ page, request }) => {
+  const k = await createKhatma(request);
+  await page.goto(manageUrl(k));
+  await page.getByRole('link', { name: /الإعدادات/ }).click();
+  await page.getByLabel('كل يوم').check();
+  await page.getByRole('button', { name: 'حفظ' }).click();
+  await expect(page.getByText('تغيير موعد تغيّر الأجزاء سيغيّر جزء كل شخص. هل تريد المتابعة؟')).toBeVisible();
+  await page.getByRole('button', { name: 'لا', exact: true }).click();
+  expect((await dashboard(request, k)).khatma.rotation_type).toBe('weekly');
+  await page.getByRole('button', { name: 'حفظ' }).click();
+  await page.getByRole('button', { name: 'نعم، احفظ' }).click();
+  await expect(page.getByText('تم الحفظ')).toBeVisible();
+  expect((await dashboard(request, k)).khatma.rotation_type).toBe('daily');
+});

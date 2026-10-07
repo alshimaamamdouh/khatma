@@ -1,10 +1,12 @@
-import { getActive } from '../utils/storage';
+import { getActive, getKhatma } from '../utils/storage';
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const NETWORK_ERROR = 'تعذّر الاتصال. تأكد من الإنترنت ثم حاول مرة أخرى.';
 
 async function request(endpoint, options = {}) {
-  const active = getActive();
+  // Use the khatma named in the URL, not the globally "active" one (two khatmas can be open on one phone)
+  const match = endpoint.match(/^\/khatma\/([0-9a-f]{24})/);
+  const active = (match && getKhatma(match[1])) || getActive();
   const headers = {
     'Content-Type': 'application/json',
     // Header values must be ISO-8859-1, so encode to allow Arabic codes/passwords

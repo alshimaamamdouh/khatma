@@ -27,7 +27,7 @@ function QuickJuzPicker({ khatmaId, participants, isDone, onJoined, onRefresh })
       if (err.status === 409) {
         setError('هذا الجزء أخذه شخص آخر، اختر جزءًا آخر');
         setJuz(null);
-        await onRefresh();
+        try { await onRefresh(); } catch { /* keep the message above */ }
       } else {
         setError(err.message);
       }
