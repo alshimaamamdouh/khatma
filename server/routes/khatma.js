@@ -12,7 +12,7 @@ const { newToken } = require('../utils/token');
 // Access a Khatma by code (participant login)
 router.post('/access', async (req, res) => {
   const { code } = req.body;
-  if (!code) {
+  if (!code || typeof code !== 'string') {
     return res.status(400).json({ error: 'الرجاء إدخال رمز الختمة' });
   }
 
@@ -33,7 +33,7 @@ router.post('/access', async (req, res) => {
 // Admin login
 router.post('/admin-login', async (req, res) => {
   const { code, adminPassword } = req.body;
-  if (!code || !adminPassword) {
+  if (!code || !adminPassword || typeof code !== 'string' || typeof adminPassword !== 'string') {
     return res.status(400).json({ error: 'رمز الختمة وكلمة مرور المسؤول مطلوبان' });
   }
 
@@ -74,7 +74,8 @@ router.post('/admin-login', async (req, res) => {
 router.post('/', async (req, res) => {
   const { name, accessCode, adminPassword, startDate, rotationType, customDays, useHijri, khatmaNumber, isQuick, organizerPhone, participants, deceased } = req.body;
 
-  if (!name || !accessCode || !adminPassword || !startDate) {
+  if (!name || !accessCode || !adminPassword || !startDate ||
+      typeof name !== 'string' || typeof accessCode !== 'string' || typeof adminPassword !== 'string') {
     return res.status(400).json({ error: 'جميع الحقول مطلوبة' });
   }
 
@@ -355,7 +356,7 @@ router.get('/:id/stats', authMiddleware, async (req, res) => {
 router.post('/:id/duplicate', adminMiddleware, async (req, res) => {
   const { newAccessCode, newAdminPassword } = req.body;
 
-  if (!newAccessCode || !newAdminPassword) {
+  if (!newAccessCode || !newAdminPassword || typeof newAccessCode !== 'string' || typeof newAdminPassword !== 'string') {
     return res.status(400).json({ error: 'رمز الدخول وكلمة المرور مطلوبان' });
   }
 
@@ -374,10 +375,13 @@ router.post('/:id/duplicate', adminMiddleware, async (req, res) => {
       rotation_type: khatma.rotation_type,
       custom_days: khatma.custom_days,
       use_hijri: khatma.use_hijri,
-      khatma_number: khatma.khatma_number
+      khatma_number: khatma.khatma_number,
+      is_quick: khatma.is_quick,
+      organizer_phone: khatma.organizer_phone || null
     });
 
-    const participants = await Participant.find({ khatma_id: khatma._id });
+    // Quick khatmas start empty: people pick their own juz
+    const participants = khatma.is_quick ? [] : await Participant.find({ khatma_id: khatma._id });
     if (participants.length > 0) {
       await Participant.insertMany(participants.map(p => ({
         khatma_id: newKhatma._id,

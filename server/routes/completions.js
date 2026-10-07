@@ -11,7 +11,7 @@ router.use(authMiddleware);
 router.post('/', async (req, res) => {
   const { participantId, cycleNumber } = req.body;
 
-  if (!participantId || !cycleNumber || !mongoose.Types.ObjectId.isValid(participantId)) {
+  if (!participantId || !Number.isInteger(cycleNumber) || cycleNumber < 1 || !mongoose.Types.ObjectId.isValid(participantId)) {
     return res.status(400).json({ error: 'بيانات غير مكتملة' });
   }
 
@@ -54,7 +54,7 @@ router.post('/', async (req, res) => {
 router.delete('/', async (req, res) => {
   const { participantId, cycleNumber } = req.body;
 
-  if (!participantId || !cycleNumber || !mongoose.Types.ObjectId.isValid(participantId)) {
+  if (!participantId || !Number.isInteger(cycleNumber) || cycleNumber < 1 || !mongoose.Types.ObjectId.isValid(participantId)) {
     return res.status(400).json({ error: 'بيانات غير مكتملة' });
   }
 
