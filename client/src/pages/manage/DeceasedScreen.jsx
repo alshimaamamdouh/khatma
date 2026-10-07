@@ -24,10 +24,10 @@ function DeceasedScreen() {
     setError('');
     try {
       await action();
-      await reload();
     } catch (err) {
       setError(err.message);
     } finally {
+      try { await reload(); } catch { /* keep the original error */ }
       busyRef.current = false;
       setBusy(false);
     }

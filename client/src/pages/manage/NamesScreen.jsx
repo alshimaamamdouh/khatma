@@ -32,11 +32,11 @@ function NamesScreen() {
     setMessage('');
     try {
       await action();
-      await reload();
       if (successMessage) setMessage(successMessage);
     } catch (err) {
       setError(err.message);
     } finally {
+      try { await reload(); } catch { /* keep the original error */ }
       busyRef.current = false;
       setBusy(false);
     }
@@ -45,9 +45,9 @@ function NamesScreen() {
   const addOne = (e) => {
     e.preventDefault();
     const name = newName.trim();
-    if (!name) return setError('الرجاء كتابة الاسم');
+    if (!name) { setMessage(''); return setError('الرجاء كتابة الاسم'); }
     const slot = freeSlots()[0];
-    if (!slot) return setError('اكتمل العدد: ٣٠ اسمًا');
+    if (!slot) { setMessage(''); return setError('اكتمل العدد: ٣٠ اسمًا'); }
     run(async () => {
       await api.addParticipant(khatmaId, { name, slotNumber: slot });
       setNewName('');
@@ -57,12 +57,22 @@ function NamesScreen() {
   const addMany = (e) => {
     e.preventDefault();
     const names = bulkText.split('\n').map(n => n.trim()).filter(Boolean);
-    if (names.length === 0) return setError('الرجاء كتابة اسم واحد على الأقل');
+    if (names.length === 0) { setMessage(''); return setError('الرجاء كتابة اسم واحد على الأقل'); }
     const slots = freeSlots();
-    if (names.length > slots.length) return setError(`يمكن إضافة ${ar(slots.length)} أسماء فقط`);
+    if (names.length > slots.length) { setMessage(''); return setError(`يمكن إضافة ${ar(slots.length)} أسماء فقط`); }
     run(async () => {
-      for (let i = 0; i < names.length; i++) {
-        await api.addParticipant(khatmaId, { name: names[i], slotNumber: slots[i] });
+      let added = 0;
+      try {
+        for (let i = 0; i < names.length; i++) {
+          await api.addParticipant(khatmaId, { name: names[i], slotNumber: slots[i] });
+          added++;
+        }
+      } catch (err) {
+        if (added > 0) {
+          setBulkText(names.slice(added).join('\n'));
+          throw new Error(`تمت إضافة ${ar(added)} من ${ar(names.length)}. ${err.message}`);
+        }
+        throw err;
       }
       setBulkText('');
       setBulkOpen(false);
@@ -72,7 +82,7 @@ function NamesScreen() {
   const saveEdit = (e) => {
     e.preventDefault();
     const name = editName.trim();
-    if (!name) return setError('الرجاء كتابة الاسم');
+    if (!name) { setMessage(''); return setError('الرجاء كتابة الاسم'); }
     run(async () => {
       await api.updateParticipant(khatmaId, editing._id, { name });
       setEditing(null);

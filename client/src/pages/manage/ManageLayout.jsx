@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Outlet } from 'react-router-dom';
+import { useParams, useNavigate, Outlet, Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { findIdByCode, getKhatma, setActive } from '../../utils/storage';
 
@@ -16,7 +16,7 @@ function ManageLayout() {
       const data = await api.adminLogin(code, password);
       setState({ loading: false, error: '', khatma: data.khatma, participants: data.participants, deceased: data.deceased });
     } catch (err) {
-      setState(s => ({ ...s, loading: false, error: err.message }));
+      setState(s => ({ ...s, loading: false, error: err.message || 'تعذر التحميل' }));
     }
   }, [code, password]);
 
@@ -30,11 +30,20 @@ function ManageLayout() {
   }, [id, password, navigate, reload]);
 
   if (state.loading) return <div className="loading">جاري التحميل...</div>;
-  if (state.error) return <div className="error-msg">{state.error}</div>;
+  if (!state.khatma) {
+    return (
+      <div className="card">
+        <div className="error-msg">{state.error}</div>
+        <Link to="/manage-login" className="btn btn-big btn-primary">دخول المنظم</Link>
+        <Link to="/" className="btn btn-big btn-secondary">الصفحة الرئيسية</Link>
+      </div>
+    );
+  }
 
   return (
     <div>
       <h2 className="khatma-title">إدارة: {state.khatma.name}</h2>
+      {state.error && <div className="error-msg">{state.error}</div>}
       <Outlet context={{ ...state, code, khatmaId: state.khatma._id, password, reload }} />
     </div>
   );

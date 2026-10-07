@@ -99,3 +99,15 @@ test('participant page shows "إدارة الختمة" only on the organizer pho
   await page.getByRole('link', { name: 'عرض الختمة كما يراها المشاركون' }).click();
   await expect(page.getByRole('link', { name: /إدارة الختمة/ })).toBeVisible();
 });
+
+test('stored wrong admin password lands on a recoverable screen', async ({ page, request }) => {
+  const k = await createKhatma(request);
+  await page.goto('/');
+  await page.evaluate(({ id, code }) => {
+    localStorage.setItem('khatmas', JSON.stringify({ [id]: { code, adminPassword: 'wrong' } }));
+  }, { id: 'x1', code: k.code });
+  await page.goto(`/k/${encodeURIComponent(k.code)}/manage`);
+  await expect(page.locator('.error-msg')).toBeVisible();
+  await page.getByRole('link', { name: 'دخول المنظم' }).click();
+  await expect(page.getByLabel('رمز الختمة')).toBeVisible();
+});
