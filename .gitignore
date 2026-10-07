@@ -5,3 +5,7 @@ server/db/*.db-shm
 server/db/*.db-wal
 .env
 *.log
+
+client/test-results/
+client/playwright-report/
+client/e2e/screenshots/

@@ -1,26 +1,32 @@
+import { getActive } from '../utils/storage';
+
 const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const NETWORK_ERROR = 'تعذّر الاتصال. تأكد من الإنترنت ثم حاول مرة أخرى.';
 
 async function request(endpoint, options = {}) {
-  const code = localStorage.getItem('khatmaCode');
-  const adminPassword = localStorage.getItem('adminPassword');
-
+  const active = getActive();
   const headers = {
     'Content-Type': 'application/json',
     // Header values must be ISO-8859-1, so encode to allow Arabic codes/passwords
-    ...(code ? { 'x-khatma-code': encodeURIComponent(code) } : {}),
-    ...(adminPassword ? { 'x-admin-password': encodeURIComponent(adminPassword) } : {}),
+    ...(active?.code ? { 'x-khatma-code': encodeURIComponent(active.code) } : {}),
+    ...(active?.adminPassword ? { 'x-admin-password': encodeURIComponent(active.adminPassword) } : {}),
+    ...(active?.participantToken ? { 'x-participant-token': active.participantToken } : {}),
     ...options.headers
   };
 
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers
-  });
+  let res;
+  try {
+    res = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers });
+  } catch {
+    throw new Error(NETWORK_ERROR);
+  }
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.error || 'حدث خطأ غير متوقع');
+    const err = new Error(data.error || 'حدث خطأ غير متوقع');
+    err.status = res.status;
+    throw err;
   }
 
   return data;
@@ -61,6 +67,10 @@ export const api = {
 
   // Participants
   getParticipants: (khatmaId) => request(`/khatma/${khatmaId}/participants`),
+
+  claimParticipant: (khatmaId, pid) => request(`/khatma/${khatmaId}/participants/${pid}/claim`, {
+    method: 'POST'
+  }),
 
   addParticipant: (khatmaId, data) => request(`/khatma/${khatmaId}/participants`, {
     method: 'POST',
