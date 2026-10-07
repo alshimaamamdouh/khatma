@@ -9,6 +9,12 @@ import HistoryPage from './pages/HistoryPage';
 import StatsPage from './pages/StatsPage';
 import NotFound from './pages/NotFound';
 import KhatmaPage from './pages/KhatmaPage';
+import ManageEntry from './pages/ManageEntry';
+import LegacyLogin from './pages/LegacyLogin';
+import ManageLayout from './pages/manage/ManageLayout';
+import ManageMenu from './pages/manage/ManageMenu';
+import NamesScreen from './pages/manage/NamesScreen';
+import DeceasedScreen from './pages/manage/DeceasedScreen';
 import Header from './components/Header';
 
 function App() {
@@ -26,6 +32,13 @@ function App() {
           <Route path="/khatma/:id/history" element={<HistoryPage />} />
           <Route path="/khatma/:id/stats" element={<StatsPage />} />
           <Route path="/k/:code" element={<KhatmaPage />} />
+          <Route path="/m/:code" element={<ManageEntry />} />
+          <Route path="/manage-login" element={<LegacyLogin />} />
+          <Route path="/k/:code/manage" element={<ManageLayout />}>
+            <Route index element={<ManageMenu />} />
+            <Route path="names" element={<NamesScreen />} />
+            <Route path="deceased" element={<DeceasedScreen />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
