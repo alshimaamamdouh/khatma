@@ -3,7 +3,9 @@ const mongoose = require('mongoose');
 const participantSchema = new mongoose.Schema({
   khatma_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Khatma', required: true },
   name: { type: String, required: true },
-  slot_number: { type: Number, required: true }
+  slot_number: { type: Number, required: true },
+  // Never returned unless explicitly selected with .select('+token')
+  token: { type: String, default: null, select: false }
 });
 
 participantSchema.index({ khatma_id: 1, slot_number: 1 }, { unique: true });

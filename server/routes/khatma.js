@@ -7,6 +7,7 @@ const Completion = require('../models/Completion');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { getCycleNumber, getCurrentJuz, getCycleDedication, isPaused, getRotationLabel, getCycleDays, getNextChangeDate } = require('../utils/rotation');
 const { normalizePhone } = require('../utils/phone');
+const { newToken } = require('../utils/token');
 
 // Access a Khatma by code (participant login)
 router.post('/access', async (req, res) => {
@@ -138,13 +139,19 @@ router.post('/:id/join', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'هذه الختمة ليست ختمة سريعة' });
     }
 
+    const token = newToken();
     const participant = await Participant.create({
       khatma_id: khatma._id,
       name,
-      slot_number: slotNumber
+      slot_number: slotNumber,
+      token
     });
 
-    res.status(201).json({ message: 'تم التسجيل بنجاح', participant });
+    res.status(201).json({
+      message: 'تم التسجيل بنجاح',
+      participant: { _id: participant._id, name: participant.name, slot_number: participant.slot_number },
+      token
+    });
   } catch (err) {
     if (err.code === 11000) {
       return res.status(409).json({ error: 'هذا الجزء مشغول بالفعل' });
@@ -403,6 +410,7 @@ router.delete('/:id', adminMiddleware, async (req, res) => {
   try {
     await Participant.deleteMany({ khatma_id: req.khatma._id });
     await Deceased.deleteMany({ khatma_id: req.khatma._id });
+    await Completion.deleteMany({ khatma_id: req.khatma._id });
     await Khatma.findByIdAndDelete(req.khatma._id);
     res.json({ message: 'تم حذف الختمة بنجاح' });
   } catch (err) {

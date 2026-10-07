@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Khatma = require('../models/Khatma');
+const Participant = require('../models/Participant');
 
 // Client URL-encodes header values so non-Latin (Arabic) text survives
 function decodeHeader(value) {
@@ -63,4 +64,17 @@ async function adminMiddleware(req, res, next) {
   }
 }
 
-module.exports = { authMiddleware, adminMiddleware };
+// True when the request may change this participant's reading status:
+// the organizer (admin password) or the phone that claimed this participant (token).
+async function canActFor(req, participantId) {
+  const adminPassword = decodeHeader(req.headers['x-admin-password']);
+  if (adminPassword && adminPassword === req.khatma.admin_password) return true;
+
+  const token = req.headers['x-participant-token'];
+  if (!token) return false;
+
+  const participant = await Participant.findOne({ _id: participantId, khatma_id: req.khatma._id }).select('+token');
+  return !!participant && !!participant.token && participant.token === token;
+}
+
+module.exports = { authMiddleware, adminMiddleware, canActFor };

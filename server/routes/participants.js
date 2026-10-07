@@ -1,4 +1,6 @@
 const express = require('express');
+const mongoose = require('mongoose');
+const { newToken } = require('../utils/token');
 const router = express.Router({ mergeParams: true });
 const Participant = require('../models/Participant');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
@@ -102,6 +104,29 @@ router.delete('/:pid', adminMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'المشارك غير موجود' });
     }
     res.json({ message: 'تم حذف المشارك بنجاح' });
+  } catch (err) {
+    res.status(500).json({ error: 'حدث خطأ' });
+  }
+});
+
+// Claim a name on this phone (any participant with the khatma link). Returns that participant's token.
+router.post('/:pid/claim', authMiddleware, async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.pid)) {
+    return res.status(404).json({ error: 'المشارك غير موجود' });
+  }
+
+  try {
+    // Only set a token if none exists, so two phones claiming at once get the same token
+    await Participant.updateOne(
+      { _id: req.params.pid, khatma_id: req.khatma._id, token: null },
+      { token: newToken() }
+    );
+    const participant = await Participant.findOne({ _id: req.params.pid, khatma_id: req.khatma._id }).select('+token');
+
+    if (!participant) {
+      return res.status(404).json({ error: 'المشارك غير موجود' });
+    }
+    res.json({ participantId: participant._id, token: participant.token });
   } catch (err) {
     res.status(500).json({ error: 'حدث خطأ' });
   }
