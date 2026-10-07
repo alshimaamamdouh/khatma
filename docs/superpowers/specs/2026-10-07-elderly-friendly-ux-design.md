@@ -1,7 +1,7 @@
 # Elderly-Friendly Khatma UX — Design
 
 Date: 2026-10-07
-Status: Approved direction, pending spec review
+Status: Approved after review changes (server-side ownership, double-tap safety, tile wording, admin-password handling)
 
 ## Goal
 
@@ -43,6 +43,11 @@ Assumed device: a phone, opening links from WhatsApp.
 
 - `<code>` is URL-encoded (old khatmas may have Arabic codes).
 - The password is in the URL fragment (`#`) so it never reaches server logs.
+- The admin password must never appear in application logs, analytics events,
+  server request logs, error reports, or any URL sent to the backend. It travels only
+  in the `x-admin-password` header. The client reads it from the fragment, stores it,
+  then removes the fragment with `history.replaceState` so it is not left in the address bar.
+  Server code must not log request headers or bodies of admin routes.
 - Opening either link stores code/id (and password for `/m`) on the phone, so the
   same phone later goes straight in from the home page.
 - New khatmas: the client generates the access code (8 random lowercase letters/digits,
@@ -56,9 +61,12 @@ Assumed device: a phone, opening links from WhatsApp.
 - Title: "مَن أنت؟ اضغط على اسمك"
 - One large button per name.
 - Tap → confirm: "هل أنت محمد أحمد؟ [نعم] [لا]".
-- "نعم" stores the participant id **per khatma** on the phone.
+- "نعم" claims the name on the server (section 5) and stores the participant id and
+  token **per khatma** on the phone.
 
-**Main screen:**
+**Main screen:** the juz card is the strongest visual element on the page — it is
+what the person opened the link to find. The greeting is smaller above it; the two
+actions sit directly under it.
 
 ```
 السلام عليكم يا محمد 🌷
@@ -69,6 +77,8 @@ Assumed device: a phone, opening links from WhatsApp.
 [ ✅ أنهيت قراءة الجزء ]
 ```
 
+- While a request is in flight, the button shows "جاري التسجيل…" and is disabled, so a
+  second tap does nothing.
 - After "أنهيت": the action buttons are replaced by
   "جزاك الله خيرًا 🌷 — تم تسجيل أنك أنهيت الجزء ١٢." and a small "تراجع" link.
 - "تراجع" → "هل تريد التراجع عن تسجيل القراءة؟ [نعم، تراجع] [لا]".
@@ -126,7 +136,7 @@ on the organizer's phone), or by the legacy login.
 |---|---|
 | الأسماء | add one / add many (one per line), edit, reorder (large ▲▼ with text), delete with confirmation |
 | الإهداء للمتوفين | add one / add many, edit, delete with confirmation |
-| من أنهى القراءة | all participants with status; organizer can mark/unmark anyone (with confirmation for unmark) |
+| تسجيل من أنهى القراءة | all participants with status; organizer can mark/unmark anyone (with confirmation for unmark) |
 | إرسال للعائلة | send khatma link; send reminder to those who haven't finished; share full distribution |
 | إيقاف مؤقت | pause from/to, resume |
 | الإعدادات | name, change schedule, Hijri, starting number, help phone; "خيارات متقدمة": download Excel file (the CSV), copy khatma, delete khatma (double confirmation) |
@@ -140,8 +150,22 @@ on the organizer's phone), or by the legacy login.
 
 - Participants: see own juz, mark/undo **own** juz, view progress and the list.
 - Organizer: everything, including marking others.
-- Enforcement is in the UI only (the goal is preventing accidents, not attacks).
-  The backend is unchanged in this respect.
+- Enforcement is applied both in the UI and in the backend. The UI prevents accidental
+  changes; the backend guarantees that participants can only update their own reading
+  status. Organizers can update any participant.
+- Mechanism — participant token:
+  - Each participant has a random `token` (server-generated, created lazily).
+  - Confirming a name ("نعم") or joining a quick khatma calls the server, which returns
+    that participant's token; the phone stores it per khatma.
+  - Mark/undo requests must carry either `x-participant-token` matching the
+    `participantId` in the body, or a valid `x-admin-password` for the khatma.
+    Otherwise the server responds 403.
+  - Honest limit: anyone with the khatma link can claim a name (there are no accounts),
+    so this guards against old clients, UI bugs and casual tampering — not a determined
+    attacker. That matches the goal.
+- Old clients that do not send a token are rejected for mark/undo; they get the new
+  client on next load, and a phone with a remembered name but no token is sent back to
+  "مَن أنت؟" once to claim it.
 
 ## 6. Old khatmas (backward compatibility)
 
@@ -155,9 +179,17 @@ on the organizer's phone), or by the legacy login.
 
 - `Khatma` model: add `organizer_phone: { type: String, default: null }`.
 - `POST /khatma` and `PUT /khatma/:id`: accept `organizerPhone` (digits only, stored normalized).
+- `Participant` model: add `token: { type: String, default: null }` (never returned in
+  participant lists or the dashboard).
+- `POST /khatma/:id/participants/:pid/claim` (auth: khatma code): returns the
+  participant's token, generating it with `crypto.randomBytes` if missing.
+- `POST /khatma/:id/join`: also returns the new participant's token.
+- `POST` / `DELETE /khatma/:id/completions`: require the participant token or admin
+  password (see section 5). Both are idempotent: marking an already-finished juz returns
+  200 with the current counts (no 409); undoing an unfinished juz returns 200.
 - `GET /khatma/:id/dashboard`: add `organizer_phone` and `nextChangeDate`
   (`start + (floor(daysSinceStart / cycleDays) + 1) * cycleDays`, `null` if daily, quick, or paused).
-- No other API changes.
+- Server never logs request headers or bodies (no request-logging middleware is added).
 
 ## Code structure
 
@@ -174,7 +206,11 @@ on the organizer's phone), or by the legacy login.
 ## Testing
 
 - Local backend + `mongodb-memory-server` (dev-only) — never the production database.
-- Server: small `node:test` tests for `nextChangeDate` and `organizer_phone` handling.
+- Server: `node:test` tests for `nextChangeDate`, `organizer_phone`, ownership
+  (own token ✓, other participant's token ✗ 403, no token ✗ 403, admin password ✓),
+  and idempotency (marking twice → one completion record, both 200; undo twice → 200).
+- Rapidly tapping the same action multiple times must produce exactly one state change
+  (Playwright: triple-click "أنهيت قراءة الجزء" → one completion, success message once).
 - UI: Playwright at 390×844 (phone) walking each flow — create regular, add names,
   participant pick name → finish → undo; create quick → pick juz; old-code login; manage link —
   with screenshots reviewed for size, wording, and RTL layout.
@@ -183,5 +219,4 @@ on the organizer's phone), or by the legacy login.
 ## Out of scope
 
 - An in-site Quran reader (we keep linking to quran.com, Arabic UI).
-- Server-side enforcement of per-participant marking.
 - Notifications / reminders sent automatically.
