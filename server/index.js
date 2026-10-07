@@ -36,7 +36,10 @@ app.get('/api', (req, res) => {
 
 // Malformed URLs / bodies get a JSON error instead of an HTML page with a stack trace
 app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
   const status = err.status || err.statusCode || 500;
+  // Message only — never the request body or headers (they carry the admin password)
+  if (status >= 500) console.error(err.message);
   res.status(status >= 400 && status < 500 ? status : 500).json({ error: status < 500 ? 'طلب غير صحيح' : 'حدث خطأ' });
 });
 

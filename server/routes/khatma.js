@@ -10,7 +10,7 @@ const { normalizePhone } = require('../utils/phone');
 const { newToken } = require('../utils/token');
 
 const ROTATION_TYPES = ['daily', 'weekly', 'biweekly', 'monthly', 'custom'];
-const isValidCustomDays = v => v === undefined || v === null || v === '' || (Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 365);
+const isValidCustomDays = v => v === undefined || v === null || v === '' || (Number.isInteger(Number(v)) && Number(v) >= 1);
 const isValidSlot = n => Number.isInteger(n) && n >= 1 && n <= 30;
 
 // Access a Khatma by code (participant login)

@@ -75,10 +75,12 @@ test('create: custom rotation with days, and custom without days defaults to 7',
 });
 
 test('create/update: invalid custom days are 400, numeric strings are accepted', async () => {
-  for (const customDays of ['abc', 0, -3, 2.5, 1000]) {
+  for (const customDays of ['abc', 0, -3, 2.5]) {
     const k = await createKhatma({ rotationType: 'custom', customDays });
     assert.strictEqual(k.res.status, 400, String(customDays));
   }
+  // No upper limit: old khatmas may already use long periods and must stay editable
+  assert.strictEqual((await createKhatma({ rotationType: 'custom', customDays: 1000 })).res.status, 201);
   const k = await createKhatma({ rotationType: 'custom', customDays: '10' });
   assert.strictEqual(k.res.status, 201);
   assert.strictEqual((await dash(k)).khatma.custom_days, 10);

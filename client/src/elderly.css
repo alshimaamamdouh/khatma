@@ -10,7 +10,7 @@ html {
 body {
   line-height: 1.7;
   /* A very long name with no spaces must wrap instead of widening the page */
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .big-row-main,

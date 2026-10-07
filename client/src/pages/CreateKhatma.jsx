@@ -46,7 +46,7 @@ function CreateKhatma() {
     setBusy(true);
     setError('');
 
-    const custom = Number(customDays);
+    const custom = Math.floor(Number(customDays));
     const payload = {
       name: name.trim(),
       organizerPhone: phone,
