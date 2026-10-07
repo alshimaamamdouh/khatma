@@ -8,6 +8,7 @@ import ManageKhatma from './pages/ManageKhatma';
 import HistoryPage from './pages/HistoryPage';
 import StatsPage from './pages/StatsPage';
 import NotFound from './pages/NotFound';
+import KhatmaPage from './pages/KhatmaPage';
 import Header from './components/Header';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
           <Route path="/khatma/:id/dashboard" element={<Dashboard />} />
           <Route path="/khatma/:id/history" element={<HistoryPage />} />
           <Route path="/khatma/:id/stats" element={<StatsPage />} />
+          <Route path="/k/:code" element={<KhatmaPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
