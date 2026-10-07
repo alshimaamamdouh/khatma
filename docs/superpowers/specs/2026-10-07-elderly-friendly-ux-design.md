@@ -171,8 +171,9 @@ on the organizer's phone), or by the legacy login.
 
 - Home page keeps "عندك رمز الختمة؟ اكتبه هنا" (code entry) for people who received an old code.
 - Manage: "دخول بالرمز وكلمة المرور" as a small link → legacy login form.
-- Old localStorage keys (`khatmaCode`, `khatmaId`, `adminPassword`, `participantId`) keep working;
-  the global `participantId` is migrated to the per-khatma key on first load.
+- Old localStorage keys (`khatmaCode`, `khatmaId`, `adminPassword`) are migrated to the per-khatma
+  record on first load. The old `participantId` is dropped (it has no token), so that person is
+  asked "مَن أنت؟" once more (see section 5).
 - `/khatma/:id/dashboard`, `/admin/manage`, `/admin/create` routes redirect to their new equivalents.
 
 ## Backend changes (small)
