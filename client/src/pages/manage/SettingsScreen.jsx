@@ -14,6 +14,13 @@ const SCHEDULES = [
   ['monthly', 'كل شهر']
 ];
 
+// Quote a CSV cell; neutralise spreadsheet formulas (= + - @)
+function csvCell(value) {
+  let s = String(value ?? '');
+  if (/^[=+\-@]/.test(s)) s = "'" + s;
+  return '"' + s.replace(/"/g, '""') + '"';
+}
+
 function SettingsScreen() {
   const { khatma, khatmaId, reload } = useOutletContext();
   const navigate = useNavigate();
@@ -31,6 +38,7 @@ function SettingsScreen() {
   const [confirmStep, setConfirmStep] = useState(0); // 0 none, 1 first, 2 final
   const [copy, setCopy] = useState(null); // { code, password, name }
   const busyRef = useRef(false);
+  const readyAt = useRef(0);
 
   // Reloads after every action (success or failure) unless the action navigated away
   const run = async (action, successMessage) => {
@@ -81,7 +89,7 @@ function SettingsScreen() {
     [...dash.participants].sort((a, b) => a.slot_number - b.slot_number).forEach(p => {
       rows.push([p.slot_number, p.name, juzOf(p), comp.completedIds.includes(p._id) ? 'أنهى' : 'لم ينته']);
     });
-    const csv = rows.map(r => r.join(',')).join('\n');
+    const csv = rows.map(r => r.map(csvCell).join(',')).join('\r\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -179,7 +187,7 @@ function SettingsScreen() {
           message="هل أنت متأكد أنك تريد حذف الختمة كلها؟ ستُحذف الأسماء والسجل."
           confirmLabel="نعم، احذف"
           danger
-          onConfirm={() => setConfirmStep(2)}
+          onConfirm={() => { readyAt.current = Date.now() + 800; setConfirmStep(2); }}
           onCancel={() => setConfirmStep(0)}
         />
       )}
@@ -188,7 +196,7 @@ function SettingsScreen() {
           message="هذا لا يمكن التراجع عنه. هل تحذفها نهائيًا؟"
           confirmLabel="نعم، احذف نهائيًا"
           danger
-          onConfirm={deleteKhatma}
+          onConfirm={() => { if (Date.now() < readyAt.current) return; deleteKhatma(); }}
           onCancel={() => setConfirmStep(0)}
         />
       )}

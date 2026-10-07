@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { test, expect } from '@playwright/test';
 import { createKhatma, addParticipant, completedCount, dashboard } from './api.js';
 
@@ -74,6 +75,7 @@ test('delete khatma needs two confirmations', async ({ page, request }) => {
   await page.getByRole('button', { name: 'حذف الختمة' }).click();
   await page.getByRole('button', { name: 'نعم، احذف' }).click();
   await expect(page.getByText('هذا لا يمكن التراجع عنه. هل تحذفها نهائيًا؟')).toBeVisible();
+  await page.waitForTimeout(900); // the final confirm ignores taps for the first 800 ms
   await page.getByRole('button', { name: 'نعم، احذف نهائيًا' }).click();
   await expect(page).toHaveURL(/\/$/);
   const res = await request.post('http://localhost:3000/api/khatma/access', { data: { code: k.code } });
@@ -90,4 +92,28 @@ test('history and stats open from the menu and go back', async ({ page, request 
   await expect(page.getByText('ترتيب المشاركين')).toBeVisible();
   await page.getByRole('link', { name: 'رجوع' }).click();
   await expect(page.getByRole('link', { name: /الأسماء/ })).toBeVisible();
+});
+
+test('Excel export escapes commas and quotes and starts with a BOM', async ({ page, request }) => {
+  const k = await createKhatma(request);
+  await addParticipant(request, k, 'علي, "الصغير"', 1);
+  await page.goto(manageUrl(k));
+  await page.getByRole('link', { name: /الإعدادات/ }).click();
+  await page.getByRole('button', { name: /خيارات متقدمة/ }).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: /تنزيل ملف Excel/ }).click();
+  const text = fs.readFileSync(await (await download).path(), 'utf8');
+  expect(text.charCodeAt(0)).toBe(0xFEFF);
+  expect(text).toContain('"علي, ""الصغير"""');
+});
+
+test('an expired pause shows the normal pause form', async ({ page, request }) => {
+  const k = await createKhatma(request);
+  await request.put(`http://localhost:3000/api/khatma/${k.id}`, {
+    headers: { 'x-admin-password': encodeURIComponent(k.password) },
+    data: { pausedFrom: '2020-01-01', pausedTo: '2020-02-01' }
+  });
+  await page.goto(manageUrl(k));
+  await page.getByRole('link', { name: /إيقاف مؤقت/ }).click();
+  await expect(page.getByRole('button', { name: 'إيقاف الختمة' })).toBeVisible();
 });

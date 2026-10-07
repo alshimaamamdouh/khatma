@@ -11,6 +11,7 @@ export function useCycleStatus(khatmaId) {
       const completions = await api.getCompletions(khatmaId, dash.cycleNumber);
       setState({ dash, completions, loading: false, error: '' });
     } catch (err) {
+      // keep previous dash/completions so a failed reload doesn't blank the screen
       setState(s => ({ ...s, loading: false, error: err.message }));
     }
   }, [khatmaId]);

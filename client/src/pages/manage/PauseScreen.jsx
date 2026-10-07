@@ -11,7 +11,9 @@ function PauseScreen() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
-  const isPaused = !!(khatma.paused_from && khatma.paused_to);
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const isPaused = !!(khatma.paused_from && khatma.paused_to && today <= khatma.paused_to);
 
   const run = async (action) => {
     if (busyRef.current) return;

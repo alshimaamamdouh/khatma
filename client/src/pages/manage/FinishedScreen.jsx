@@ -15,7 +15,7 @@ function FinishedScreen() {
   const busyRef = useRef(false);
 
   if (loading) return <div className="loading">جاري التحميل...</div>;
-  if (loadError) return <div className="error-msg">{loadError}</div>;
+  if (!dash || !completions) return <div className="error-msg">{loadError || 'تعذّر التحميل'}</div>;
 
   const isDone = (pid) => completions.completedIds.includes(pid);
   const juzOf = (p) => (khatma.is_quick ? p.slot_number : p.currentJuz);
@@ -43,7 +43,7 @@ function FinishedScreen() {
     <div>
       <h3 className="section-title">تسجيل من أنهى القراءة</h3>
       <p className="hint">{ar(completions.completedCount)} من {ar(completions.totalParticipants)} أنهوا القراءة</p>
-      {error && <div className="error-msg">{error}</div>}
+      {(error || loadError) && <div className="error-msg">{error || loadError}</div>}
 
       <div className="big-list">
         {rows.map(p => (
