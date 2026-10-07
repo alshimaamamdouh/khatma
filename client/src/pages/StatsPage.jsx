@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import { api } from '../api/client';
+import BackButton from '../components/BackButton';
 
 function StatsPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { khatmaId: id } = useOutletContext();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -96,11 +96,7 @@ function StatsPage() {
         </div>
       </div>
 
-      <div style={{ textAlign: 'center', marginTop: 16 }}>
-        <button className="btn btn-secondary" onClick={() => navigate(`/khatma/${id}/dashboard`)}>
-          العودة للوحة
-        </button>
-      </div>
+      <BackButton to=".." />
     </div>
   );
 }

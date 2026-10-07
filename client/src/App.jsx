@@ -15,6 +15,10 @@ import ManageLayout from './pages/manage/ManageLayout';
 import ManageMenu from './pages/manage/ManageMenu';
 import NamesScreen from './pages/manage/NamesScreen';
 import DeceasedScreen from './pages/manage/DeceasedScreen';
+import FinishedScreen from './pages/manage/FinishedScreen';
+import SendScreen from './pages/manage/SendScreen';
+import PauseScreen from './pages/manage/PauseScreen';
+import SettingsScreen from './pages/manage/SettingsScreen';
 import Header from './components/Header';
 
 function App() {
@@ -29,8 +33,6 @@ function App() {
           <Route path="/admin/manage" element={<ManageKhatma />} />
           <Route path="/khatma/:id/select" element={<SelectParticipant />} />
           <Route path="/khatma/:id/dashboard" element={<Dashboard />} />
-          <Route path="/khatma/:id/history" element={<HistoryPage />} />
-          <Route path="/khatma/:id/stats" element={<StatsPage />} />
           <Route path="/k/:code" element={<KhatmaPage />} />
           <Route path="/m/:code" element={<ManageEntry />} />
           <Route path="/manage-login" element={<LegacyLogin />} />
@@ -38,6 +40,12 @@ function App() {
             <Route index element={<ManageMenu />} />
             <Route path="names" element={<NamesScreen />} />
             <Route path="deceased" element={<DeceasedScreen />} />
+            <Route path="finished" element={<FinishedScreen />} />
+            <Route path="send" element={<SendScreen />} />
+            <Route path="pause" element={<PauseScreen />} />
+            <Route path="settings" element={<SettingsScreen />} />
+            <Route path="history" element={<HistoryPage />} />
+            <Route path="stats" element={<StatsPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

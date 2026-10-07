@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useOutletContext, Link } from 'react-router-dom';
 import { api } from '../api/client';
+import BackButton from '../components/BackButton';
 
 function HistoryPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { khatmaId: id } = useOutletContext();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -32,6 +32,8 @@ function HistoryPage() {
       <div className="card">
         <h2 className="card-title">سجل الختمات السابقة</h2>
       </div>
+
+      <Link to="../stats" className="btn btn-big btn-secondary">الإحصائيات</Link>
 
       {history.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', color: 'var(--text-light)' }}>
@@ -86,11 +88,7 @@ function HistoryPage() {
         ))
       )}
 
-      <div style={{ textAlign: 'center', marginTop: 16 }}>
-        <button className="btn btn-secondary" onClick={() => navigate(`/khatma/${id}/dashboard`)}>
-          العودة للوحة
-        </button>
-      </div>
+      <BackButton to=".." />
     </div>
   );
 }
